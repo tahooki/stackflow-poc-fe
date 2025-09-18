@@ -237,24 +237,35 @@ replace("Home", {}, { skipExitActiveState: true });
 
 #### 목적
 
-* **전역 규칙은 플러그인**으로 가로채고, \*\*호출부 의도는 `push()` 3번째 인자(options)\*\*로 전달해 오버라이드.
-* 호출부는 `useActions().push(name, params, { navFlags })` 형태만 사용하고, **판단 로직은 전부 플러그인**에 둡니다.
+* **전역 규칙은 플러그인**으로 가로채고, **호출부 의도는 `push()` 3번째 인자(options)**로 전달.
+* 호출부는 `useActions().push(name, params, { navFlag })` 형태만 사용하고, **판단 로직은 전부 플러그인**에 둡니다.
 
 #### 타입 정의 (앱 공유 타입)
 
 ```ts
 export type NavFlag =
-  | { type: "SINGLE_TOP" }
-  | { type: "CLEAR_TOP"; target: string }
-  | { type: "JUMP_TO"; to: string }
-  | { type: "CLEAR_TASK" };
+  | { flag: "SINGLE_TOP" }
+  | { flag: "CLEAR_TOP"; activity: string }
+  | { flag: "JUMP_TO"; activity: string }
+  | { flag: "CLEAR_STACK" }
+  | { flag: "CLEAR_TOP_SINGLE_TOP"; activity: string }
+  | { flag: "JUMP_TO_CLEAR_TOP"; activity: string };
 
 export type PushOptionsExt = Parameters<ReturnType<typeof useActions>["push"]>[2] & {
-  navFlags?: NavFlag[];
+  navFlag?: NavFlag;
 };
 ```
 
-#### 플러그인 구현: onBeforePush에서 navFlags 해석
+#### 플래그 설명
+
+- **SINGLE_TOP**: 현재 최상단 액티비티가 동일하면 `replace`, 그렇지 않으면 `push`로 중복 진입을 방지합니다.
+- **CLEAR_TOP(activity)**: 지정한 `activity` 위에 있는 액티비티를 모두 `pop`한 뒤 `replace`로 끌어올립니다. 대상이 없으면 기본 `push`로 폴백합니다.
+- **JUMP_TO(activity)**: 호출부에서 요청한 액티비티 대신 지정한 `activity`를 새로 `push`합니다.
+- **CLEAR_STACK**: 전체 스택을 비우고 현재 요청된 액티비티를 새로 `push`합니다. 홈 복귀나 세션 초기화 시 유용합니다.
+- **CLEAR_TOP_SINGLE_TOP(activity)**: 먼저 `CLEAR_TOP(activity)`을 시도하고, 대상이 없으면 `SINGLE_TOP` 규칙으로 동일 액티비티 중복을 막습니다.
+- **JUMP_TO_CLEAR_TOP(activity)**: 대상이 스택에 있으면 해당 위치 위를 모두 비우고 `replace`, 없으면 `push`로 진입합니다.
+
+#### 플러그인 구현: onBeforePush에서 navFlag 해석
 
 ```ts
 import type { StackflowPlugin } from "@stackflow/core";
@@ -262,70 +273,85 @@ import type { StackflowPlugin } from "@stackflow/core";
 export const navFlagPlugin = (): StackflowPlugin => ({
   name: "nav-flag-plugin",
   onBeforePush({ action, preventDefault, actions }) {
-    // 1) per-call 옵션에서 navFlags 읽기 (권장 경로)
-    const flags = (action as any).options?.navFlags as NavFlag[] | undefined;
+    const flag = (action as any).options?.navFlag as NavFlag | undefined;
+    if (!flag) return;
 
-    // 2) 호환: 옵션이 액션에 보존되지 않는 버전일 경우, params 예약 키로 전달한 것을 읽는 대안
-    const fallbackFlags = !(flags && flags.length)
-      ? (action.params as any)?.__nav as NavFlag[] | undefined
-      : undefined;
-
-    const useFlags = flags?.length ? flags : (fallbackFlags ?? []);
-    if (!useFlags.length) return;
-
-    // 원본 push 취소 후, 플래그에 따라 대체 시퀀스 실행
     preventDefault();
 
     const stack = actions.getStack();
     const top = stack.activities.at(-1);
 
-    // 1) JUMP_TO: 목적지로 바로 전환 의도 → 이후 규칙과 조합 가능
-    const jump = useFlags.find((f): f is Extract<NavFlag, { type: "JUMP_TO" }> => f.type === "JUMP_TO");
-    const targetName = jump ? jump.to : action.activityName;
-
-    // 2) CLEAR_TASK: 전체 초기화
-    if (useFlags.some(f => f.type === "CLEAR_TASK")) {
-      for (let i = stack.activities.length - 1; i >= 0; i--) actions.pop();
-      actions.push(targetName, action.params, (action as any).options);
-      return;
-    }
-
-    // 3) SINGLE_TOP: 최상단이 동일하면 새 push 대신 replace
-    if (useFlags.some(f => f.type === "SINGLE_TOP") && top?.name === targetName) {
-      actions.replace(targetName, action.params, (action as any).options);
-      return;
-    }
-
-    // 4) CLEAR_TOP: 특정 대상까지 비우고 replace
-    const ct = useFlags.find((f): f is Extract<NavFlag, { type: "CLEAR_TOP" }> => f.type === "CLEAR_TOP");
-    if (ct) {
-      const idx = stack.activities.findIndex(a => a.name === ct.target);
+    const doClearTop = (activityName: string) => {
+      const idx = stack.activities.findIndex(a => a.name === activityName);
       if (idx >= 0) {
         for (let i = stack.activities.length - 1; i > idx; i--) actions.pop();
-        actions.replace(ct.target, action.params, (action as any).options);
+        actions.replace(activityName, action.params, (action as any).options);
+        return true;
+      }
+      return false;
+    };
+
+    switch (flag.flag) {
+      case "SINGLE_TOP": {
+        if (top?.name === action.activityName) {
+          actions.replace(action.activityName, action.params, (action as any).options);
+        } else {
+          actions.push(action.activityName, action.params, (action as any).options);
+        }
+        return;
+      }
+      case "CLEAR_TOP": {
+        if (!doClearTop(flag.activity)) {
+          actions.push(action.activityName, action.params, (action as any).options);
+        }
+        return;
+      }
+      case "CLEAR_STACK": {
+        for (let i = stack.activities.length - 1; i >= 0; i--) actions.pop();
+        actions.push(action.activityName, action.params, (action as any).options);
+        return;
+      }
+      case "JUMP_TO": {
+        actions.push(flag.activity, action.params, (action as any).options);
+        return;
+      }
+      case "CLEAR_TOP_SINGLE_TOP": {
+        if (doClearTop(flag.activity)) return;
+        if (top?.name === action.activityName) {
+          actions.replace(action.activityName, action.params, (action as any).options);
+        } else {
+          actions.push(action.activityName, action.params, (action as any).options);
+        }
+        return;
+      }
+      case "JUMP_TO_CLEAR_TOP": {
+        const target = flag.activity;
+        const idx = stack.activities.findIndex(a => a.name === target);
+        if (idx >= 0) {
+          for (let i = stack.activities.length - 1; i > idx; i--) actions.pop();
+          actions.replace(target, action.params, (action as any).options);
+        } else {
+          actions.push(target, action.params, (action as any).options);
+        }
         return;
       }
     }
-
-    // 기본: 목적지로 push
-    actions.push(targetName, action.params, (action as any).options);
   },
 });
 ```
 
-> 권장: 위 플러그인을 전역으로 등록하고, **호출부는 판단 없이 navFlags만 전달**하세요. 코어가 `action.options`를 보존하지 않는 구버전일 경우, `params.__nav`를 읽는 **fallback** 로직처럼 예약 키를 쓰되, `overrideActionParams()`로 최종 전달 params에서 제거하세요.
-
-#### 사용 예시 (호출부는 옵션만 지정)
+#### 사용 예시 (호출부는 단일 navFlag 지정)
 
 ```ts
 const { push } = useActions();
 
-push("Page7", { id: 123 }, {
-  navFlags: [
-    { type: "JUMP_TO", to: "Page4" },
-    { type: "CLEAR_TOP", target: "Page4" },
-    { type: "SINGLE_TOP" },
-  ],
+// 알림 클릭 시 Detail 앞으로 끌어오기 + 중복 방지
+push("Detail", { id: detailId }, {
+  navFlag: { flag: "CLEAR_TOP", activity: "Detail" },
+});
+
+push("Detail", { id: detailId }, {
+  navFlag: { flag: "SINGLE_TOP" },
 });
 ```
 
@@ -345,9 +371,9 @@ const { Stack } = stackflow({
 
 #### 운영 팁
 
-* **우선순위**(권장): `JUMP_TO` → `SINGLE_TOP` → `CLEAR_TOP` → `CLEAR_TASK`.
+* **우선순위**(권장): `JUMP_TO` → `SINGLE_TOP` → `CLEAR_TOP` → `CLEAR_STACK`.
 * **History 연동**: `onBeforePop`에서 모달/스텝 우선 닫기 정책과 함께 구성.
-* **테스트 케이스**: (A) 동일 최상단 + SINGLE\_TOP, (B) 중간에 target 존재 + CLEAR\_TOP, (C) 전부 비우기 + CLEAR\_TASK, (D) JUMP\_TO와 조합.
+* **테스트 케이스**: (A) 동일 최상단 + SINGLE\_TOP, (B) 중간에 activity 존재 + CLEAR\_TOP, (C) 전부 비우기 + CLEAR\_STACK, (D) JUMP\_TO와 조합.
 
 ### 7.3 모달/스텝 + 히스토리 통합 관리
 
@@ -454,7 +480,7 @@ import { stackflow } from "@stackflow/react";
 import { basicUIPlugin } from "@stackflow/plugin-basic-ui";
 import { rendererBasicPlugin } from "@stackflow/plugin-renderer-basic";
 import { historySyncPlugin } from "@stackflow/plugin-history-sync";
-import { navFlagPlugin, NavFlag } from "./navFlagPlugin"; // ← 플러그인 분리 구현
+import { navFlagPlugin, NavFlag } from "./navFlagPlugin";
 
 // stackflow 초기화
 const { Stack, useActions } = stackflow({
@@ -481,11 +507,7 @@ function SomeButton() {
     <button
       onClick={() =>
         push("Page7", { id: 123 }, {
-          navFlags: [
-            { type: "JUMP_TO", to: "Page4" },
-            { type: "CLEAR_TOP", target: "Page4" },
-            { type: "SINGLE_TOP" },
-          ],
+          navFlag: { flag: "JUMP_TO", activity: "Page4" },
         })
       }
     >

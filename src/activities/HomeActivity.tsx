@@ -1,7 +1,9 @@
-import type { ActivityComponentType } from '@stackflow/react'
-import { useMemo } from 'react'
+import { AppScreen } from "@stackflow/plugin-basic-ui";
+import type { ActivityComponentType } from '@stackflow/react';
+ 
+import { useMemo } from 'react';
 
-import { useFlow } from '../stackflow'
+import { useFlow } from '../stackflow';
 
 export type HomeActivityParams = {
   highlight?: string
@@ -22,7 +24,7 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
   const heroMessage = useMemo(() => messages[Math.floor(Math.random() * messages.length)], [])
 
   return (
-    <div className="activity">
+    <AppScreen appBar={{ title: "Home" }}>
       <section className="activity__header">
         <h1>Stackflow Playground</h1>
         <p>{params.highlight ?? heroMessage}</p>
@@ -46,7 +48,7 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
           <li>Activities can hold any stateful components you need to stress test.</li>
         </ul>
       </section>
-    </div>
+    </AppScreen>
   )
 }
 
