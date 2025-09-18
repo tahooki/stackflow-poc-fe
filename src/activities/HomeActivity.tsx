@@ -3,7 +3,7 @@ import type { ActivityComponentType } from '@stackflow/react';
  
 import { useMemo } from 'react';
 
-import { useFlow } from '../stackflow';
+import { useNavActions } from '../hooks/useNavActions';
 
 export type HomeActivityParams = {
   highlight?: string
@@ -20,7 +20,7 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
 }: {
   params: HomeActivityParams
 }) => {
-  const { push } = useFlow()
+  const { push } = useNavActions()
   const heroMessage = useMemo(() => messages[Math.floor(Math.random() * messages.length)], [])
 
   return (
@@ -34,8 +34,28 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
         <h2>Quick Navigation Check</h2>
         <p>Use the actions below to grow the stack and observe transitions.</p>
         <div className="activity__actions">
-          <button type="button" onClick={() => push('home', { highlight: 'Hello, World!' })}>
-            Push detail screen
+          <button type="button" onClick={() => push('detail', { id: String(Date.now()) })}>
+            Push detail screen (baseline)
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              push('detail', { id: '42', title: 'Reused via CLEAR_TOP' }, {
+                navFlag: { flag: 'CLEAR_TOP', activity: 'detail' },
+              })
+            }
+          >
+            Bring Detail 42 to front (CLEAR_TOP)
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              push('detail', { id: '99', title: 'Jumped from notification' }, {
+                navFlag: { flag: 'JUMP_TO_CLEAR_TOP', activity: 'detail' },
+              })
+            }
+          >
+            Jump to Detail 99 (JUMP_TO_CLEAR_TOP)
           </button>
         </div>
       </section>
