@@ -27,12 +27,18 @@ const DetailActivity: ActivityComponentType<DetailActivityParams> = ({
   );
 
   return (
-    <AppScreen appBar={{ title: `Detail ${params.id}` }}>
+    <AppScreen appBar={{ border: false, title: (
+      <div>
+        Detail {params.id}
+      </div>
+    ) }}
+    >
       <section className="activity__header">
         <h1>{params.title ?? `Item #${params.id}`}</h1>
         <p>{randomTip}</p>
       </section>
 
+      <div className="activity__content">
       <section className="activity__card">
         <h2>Navigation Experiments</h2>
         <p>Trigger a notification-style jump that clears intermediate screens.</p>
@@ -59,6 +65,9 @@ const DetailActivity: ActivityComponentType<DetailActivityParams> = ({
           </button>
         </div>
       </section>
+      </div>
+
+      
     </AppScreen>
   );
 };
