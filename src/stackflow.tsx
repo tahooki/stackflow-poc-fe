@@ -5,16 +5,12 @@ import { historySyncPlugin } from '@stackflow/plugin-history-sync';
 
 import { stackflow } from '@stackflow/react';
 
-import DetailActivity from './activities/DetailActivity';
 import HomeActivity from './activities/HomeActivity';
-import ProfileActivity from './activities/ProfileActivity';
 
 const appStack = stackflow({
   transitionDuration: 350,
   activities: {
     home: HomeActivity,
-    detail: DetailActivity,
-    profile: ProfileActivity,
   },
   initialActivity: () => 'home',
   plugins: [
@@ -25,8 +21,6 @@ const appStack = stackflow({
     historySyncPlugin({
       routes: {
         home: '/',
-        detail: '/detail',
-        profile: '/profile',
       },
       fallbackActivity: () => 'home',
     }),

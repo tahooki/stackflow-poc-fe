@@ -18,7 +18,7 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
 }: {
   params: HomeActivityParams
 }) => {
-  const { push, replace } = useFlow()
+  const { push } = useFlow()
   const heroMessage = useMemo(() => messages[Math.floor(Math.random() * messages.length)], [])
 
   return (
@@ -32,39 +32,8 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
         <h2>Quick Navigation Check</h2>
         <p>Use the actions below to grow the stack and observe transitions.</p>
         <div className="activity__actions">
-          <button
-            type="button"
-            onClick={() =>
-              push('detail', {
-                topic: 'Stackflow basics',
-                openedFrom: 'home',
-                step: 1,
-              })
-            }
-          >
+          <button type="button" onClick={() => push('home', { highlight: 'Hello, World!' })}>
             Push detail screen
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              push('profile', {
-                username: 'stackflower',
-              })
-            }
-          >
-            Push profile screen
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              replace('detail', {
-                topic: 'Replaced detail screen',
-                openedFrom: 'home',
-                step: 1,
-              })
-            }
-          >
-            Replace with detail
           </button>
         </div>
       </section>
