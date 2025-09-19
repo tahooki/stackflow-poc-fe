@@ -282,26 +282,48 @@ body {
 
 .stack-panel__list {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: column-reverse;
+  gap: 10px;
   max-height: 280px;
   overflow-y: auto;
+  padding-right: 6px;
 }
 
 .stack-panel__item {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+  align-items: center;
+  gap: 12px;
   border-radius: 12px;
-  padding: 12px;
+  padding: 12px 14px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: rgba(248, 250, 252, 0.95);
   cursor: pointer;
   text-align: left;
+  transform: translateX(0);
+  opacity: 1;
+  transition: border-color 0.2s ease, background 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.stack-panel__item strong {
+.stack-panel__item-depth {
+  min-width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(59, 130, 246, 0.15);
+  color: #1d4ed8;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.stack-panel__item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stack-panel__item-body strong {
   font-size: 0.95rem;
   color: #0f172a;
 }
@@ -318,7 +340,20 @@ body {
 
 .stack-panel__item--active {
   border-color: rgba(59, 130, 246, 0.7);
-  background: rgba(191, 219, 254, 0.45);
+  background: rgba(191, 219, 254, 0.35);
+  box-shadow: 0 12px 28px rgba(59, 130, 246, 0.2);
+}
+
+.stack-panel__item--enter {
+  animation: stack-item-enter 0.32s cubic-bezier(0.17, 0.84, 0.44, 1) forwards;
+}
+
+.stack-panel__item--exit {
+  animation: stack-item-exit 0.28s ease-in forwards;
+}
+
+.stack-panel__item--inactive {
+  pointer-events: none;
 }
 
 .stack-panel__empty {
@@ -373,6 +408,32 @@ body {
   justify-content: center;
   align-items: center;
   color: #475569;
+}
+
+@keyframes stack-item-enter {
+  0% {
+    transform: translateX(56px);
+    opacity: 0;
+  }
+  70% {
+    transform: translateX(-6px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes stack-item-exit {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(40px);
+    opacity: 0;
+  }
 }
 
 .modal-overlay {
