@@ -16,6 +16,11 @@ import HomeActivity from "./activities/HomeActivity";
 import ModalActivity from "./activities/ModalActivity";
 import StressActivity from "./activities/StressActivity";
 import {
+  ScenarioPanel,
+  type ScenarioCard,
+} from "./components/ScenarioPanel";
+import { StackDevtoolsPanel } from "./components/StackDevtoolsPanel";
+import {
   NFXStack,
   type StackRouteConfig,
   getFlowActions,
@@ -256,211 +261,6 @@ const ResizableViewport = ({
   );
 };
 
-type StackActivity = DevtoolsDataStore["stack"]["activities"][number];
-
-type StackEntry = {
-  activity: StackActivity;
-  depth: number;
-  status: "enter" | "idle" | "exit";
-};
-
-const STACK_ANIMATION_MS = 320;
-
-const DevtoolsStackPanel = ({ data }: { data: DevtoolsDataStore | null }) => {
-  const activities = useMemo(
-    () =>
-      (data?.stack.activities ?? []).filter(
-        (activity) => activity.exitedBy === undefined
-      ),
-    [data]
-  );
-  const [entries, setEntries] = useState<StackEntry[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const orderMap = new Map(
-      activities.map((activity, index) => [activity.id, index])
-    );
-
-    setEntries((prev) => {
-      const next: StackEntry[] = [];
-      const retained = new Set<string>();
-
-      prev.forEach((entry) => {
-        const nextIndex = orderMap.get(entry.activity.id);
-        if (typeof nextIndex === "number") {
-          retained.add(entry.activity.id);
-          next.push({
-            activity: activities[nextIndex],
-            depth: nextIndex + 1,
-            status: entry.status === "exit" ? "exit" : "idle",
-          });
-        } else if (entry.status !== "exit") {
-          next.push({ ...entry, status: "exit" });
-        } else {
-          next.push(entry);
-        }
-      });
-
-      activities.forEach((activity, index) => {
-        if (retained.has(activity.id)) {
-          return;
-        }
-
-        next.push({
-          activity,
-          depth: index + 1,
-          status: "enter",
-        });
-      });
-
-      return next.sort(
-        (a, b) =>
-          (a.depth ?? Number.MAX_SAFE_INTEGER) -
-          (b.depth ?? Number.MAX_SAFE_INTEGER)
-      );
-    });
-  }, [activities]);
-
-  useEffect(() => {
-    const timers: number[] = [];
-
-    entries.forEach((entry) => {
-      if (entry.status === "enter") {
-        timers.push(
-          window.setTimeout(() => {
-            setEntries((state) =>
-              state.map((item) =>
-                item.activity.id === entry.activity.id &&
-                item.status === "enter"
-                  ? { ...item, status: "idle" }
-                  : item
-              )
-            );
-          }, STACK_ANIMATION_MS)
-        );
-      }
-
-      if (entry.status === "exit") {
-        timers.push(
-          window.setTimeout(() => {
-            setEntries((state) =>
-              state.filter((item) => item.activity.id !== entry.activity.id)
-            );
-          }, STACK_ANIMATION_MS)
-        );
-      }
-    });
-
-    return () => {
-      timers.forEach((id) => window.clearTimeout(id));
-    };
-  }, [entries]);
-
-  useEffect(() => {
-    const activeEntries = entries.filter((entry) => entry.status !== "exit");
-
-    if (activeEntries.length === 0) {
-      setSelectedId(null);
-      return;
-    }
-
-    setSelectedId((prev) => {
-      if (prev && activeEntries.some((entry) => entry.activity.id === prev)) {
-        return prev;
-      }
-
-      return activeEntries[activeEntries.length - 1].activity.id;
-    });
-  }, [entries]);
-
-  const sortedEntries = useMemo(
-    () => entries.slice().sort((a, b) => a.depth - b.depth),
-    [entries]
-  );
-  const activeSelected = sortedEntries.find(
-    (entry) => entry.activity.id === selectedId && entry.status !== "exit"
-  );
-  const liveDepth = entries.filter((entry) => entry.status !== "exit").length;
-
-  return (
-    <div className="panel stack-panel">
-      <header className="panel__header">
-        <h2>Stackflow Devtools</h2>
-        <span className="panel__meta">Depth {liveDepth}</span>
-      </header>
-      <div className="stack-panel__list">
-        {sortedEntries.map((entry) => {
-          const { activity, depth, status } = entry;
-          const isActive = activity.id === selectedId && status !== "exit";
-          return (
-            <button
-              key={activity.id}
-              type="button"
-              className={[
-                "stack-panel__item",
-                `stack-panel__item--${status}`,
-                isActive ? "stack-panel__item--active" : null,
-                status === "exit" ? "stack-panel__item--inactive" : null,
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              onClick={() => status !== "exit" && setSelectedId(activity.id)}
-              disabled={status === "exit"}
-            >
-              <span className="stack-panel__item-depth">{depth}</span>
-              <div className="stack-panel__item-body">
-                <strong>{activity.name}</strong>
-                <span className="stack-panel__item-meta">
-                  {activity.transitionState}
-                </span>
-                <span className="stack-panel__item-id">{activity.id}</span>
-              </div>
-            </button>
-          );
-        })}
-        {sortedEntries.length === 0 && (
-          <div className="stack-panel__empty">Stack is empty.</div>
-        )}
-      </div>
-
-      {activeSelected ? (
-        <div className="stack-panel__detail">
-          <h3>{activeSelected.activity.name}</h3>
-          <section>
-            <h4>Params</h4>
-            <pre>
-              {JSON.stringify(activeSelected.activity.params ?? {}, null, 2)}
-            </pre>
-          </section>
-          {activeSelected.activity.enteredBy.activityContext && (
-            <section>
-              <h4>Options</h4>
-              <pre>
-                {JSON.stringify(
-                  activeSelected.activity.enteredBy.activityContext,
-                  null,
-                  2
-                )}
-              </pre>
-            </section>
-          )}
-          <section>
-            <h4>Entered</h4>
-            <pre>
-              {JSON.stringify(activeSelected.activity.enteredBy, null, 2)}
-            </pre>
-          </section>
-        </div>
-      ) : (
-        <div className="stack-panel__detail stack-panel__detail--empty">
-          Select an activity to inspect params.
-        </div>
-      )}
-    </div>
-  );
-};
-
 const App = () => {
   const devtoolsData = useStackflowDevtoolsData();
   const [viewportSize, setViewportSize] = useState(DEFAULT_VIEWPORT);
@@ -610,9 +410,26 @@ const App = () => {
     [queueTimeout]
   );
 
-  const handleScenario = useCallback(
-    (scenario: Scenario) => {
+  const scenarioCards: ScenarioCard[] = useMemo(
+    () =>
+      scenarios.map(({ id, title, description, steps, flagLabel }) => ({
+        id,
+        title,
+        description,
+        steps,
+        flagLabel,
+      })),
+    [scenarios]
+  );
+
+  const handleScenarioRun = useCallback(
+    (scenarioId: string) => {
       if (!actions) {
+        return;
+      }
+
+      const scenario = scenarios.find((candidate) => candidate.id === scenarioId);
+      if (!scenario) {
         return;
       }
 
@@ -622,51 +439,17 @@ const App = () => {
       scenario.run(actions, { queue: queueTimeout });
       setActiveScenario(scenario.id);
     },
-    [actions, queueTimeout]
+    [actions, queueTimeout, scenarios]
   );
 
   return (
     <div className="app-shell">
-      <section className="panel scenario-panel">
-        <header className="panel__header">
-          <h2>시나리오 보드</h2>
-          <span className="panel__meta">
-            NAV 플래그 케이스와 상태 유지 흐름을 빠르게 실행합니다.
-          </span>
-        </header>
-        <ul className="scenario-list">
-          {scenarios.map((scenario) => (
-            <li
-              key={scenario.id}
-              className={
-                activeScenario === scenario.id
-                  ? "scenario-card scenario-card--active"
-                  : "scenario-card"
-              }
-            >
-              <div>
-                <span className="scenario-card__flag">
-                  {scenario.flagLabel}
-                </span>
-                <h3>{scenario.title}</h3>
-                <p>{scenario.description}</p>
-                <ul className="scenario-card__steps">
-                  {scenario.steps.map((step) => (
-                    <li key={step}>{step}</li>
-                  ))}
-                </ul>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleScenario(scenario)}
-                disabled={!actions}
-              >
-                실행
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <ScenarioPanel
+        scenarios={scenarioCards}
+        activeScenarioId={activeScenario}
+        onRunScenario={handleScenarioRun}
+        isActionsReady={Boolean(actions)}
+      />
 
       <section className="viewport-panel panel">
         <header className="panel__header">
@@ -736,7 +519,7 @@ const App = () => {
         </div>
       </section>
 
-      <DevtoolsStackPanel data={devtoolsData} />
+      <StackDevtoolsPanel data={devtoolsData} />
     </div>
   );
 };
