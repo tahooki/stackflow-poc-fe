@@ -1,30 +1,32 @@
-import '@stackflow/plugin-basic-ui/index.css'
-import './App.css'
+import "@stackflow/plugin-basic-ui/index.css";
+import "./App.css";
 
-import DetailActivity from './activities/DetailActivity'
-import HomeActivity from './activities/HomeActivity'
-import { NFXStack } from './lib/NFXStack'
+import DetailActivity from "./activities/DetailActivity";
+import HomeActivity from "./activities/HomeActivity";
+import { NFXStack, type StackRouteConfig } from "./lib/NFXStack";
 
-const stackRoutes = [
+const stackRoutes: StackRouteConfig[] = [
   {
-    name: 'home',
+    name: "home",
     activity: HomeActivity,
-    route: '/',
+    route: "/",
     initial: true,
   },
   {
-    name: 'detail',
+    name: "detail",
     activity: DetailActivity,
-    route: '/detail/:id',
+    route: {
+      path: "/detail/:id",
+    },
   },
-] as const
+];
 
 function App() {
   return (
     <div className="app">
       <NFXStack routes={stackRoutes} />
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
