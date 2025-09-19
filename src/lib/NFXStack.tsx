@@ -8,6 +8,7 @@ import { historySyncPlugin } from "@stackflow/plugin-history-sync";
 import type { RouteLike } from "@stackflow/plugin-history-sync";
 
 import { navFlagPlugin } from "../plugins/navFlagPlugin";
+import { devtoolsPlugin } from "@stackflow/plugin-devtools";
 
 // ActivityComponentType 제네릭이 사실상 불공변이어서 공용 레지스트리는 `any`로 둬야 한다.
 // 액티비티를 선언하는 쪽에서 params 타입은 유지되지만, 내부 저장소는 모든 형태를 받아야 한다.
@@ -82,6 +83,7 @@ const ensureStackflowInstance = (
         basicUIPlugin({
           theme: "android",
         }),
+        devtoolsPlugin(),
         navFlagPlugin(),
         historySyncPlugin({
           routes: historyRoutes,
@@ -129,4 +131,12 @@ export const useFlow = () => {
   }
 
   return appStack.useFlow();
+};
+
+export const getFlowActions = () => {
+  if (!appStack) {
+    return null;
+  }
+
+  return appStack.actions;
 };

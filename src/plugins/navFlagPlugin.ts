@@ -83,6 +83,12 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({ acti
   const sanitizedContext = sanitizeRecord(actionParams.activityContext as UnknownRecord | undefined) as
     | ActivityContextShape
     | undefined;
+  const augmentContext = navFlag
+    ? (({
+        ...(sanitizedContext ?? {}),
+        navFlag,
+      } as UnknownRecord) as ActivityContextShape)
+    : sanitizedContext;
 
   const stack = actions.getStack();
   const top = stack.activities[stack.activities.length - 1];
@@ -93,7 +99,7 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({ acti
       activityId: actionParams.activityId,
       activityName,
       activityParams: sanitizedParams,
-      activityContext: sanitizedContext,
+      activityContext: augmentContext,
       skipEnterActiveState: actionParams.skipEnterActiveState,
     });
   };
@@ -103,7 +109,7 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({ acti
       activityId: actionParams.activityId,
       activityName,
       activityParams: sanitizedParams,
-      activityContext: sanitizedContext,
+      activityContext: augmentContext,
       skipEnterActiveState: actionParams.skipEnterActiveState,
     });
   };
