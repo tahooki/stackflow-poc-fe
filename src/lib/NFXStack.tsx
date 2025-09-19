@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 
 import { stackflow } from "@stackflow/react";
 import type { ActivityComponentType } from "@stackflow/react";
+import type { StackComponentType } from "@stackflow/react";
 import { basicUIPlugin } from "@stackflow/plugin-basic-ui";
 import { basicRendererPlugin } from "@stackflow/plugin-renderer-basic";
 import { historySyncPlugin } from "@stackflow/plugin-history-sync";
@@ -27,6 +28,7 @@ export type StackRouteConfig<
 type Props = {
   routes: ReadonlyArray<StackRouteConfig>;
   fallbackActivity?: string;
+  children?: (StackComponent: StackComponentType) => ReactNode;
 };
 
 let appStack: ReturnType<typeof stackflow<ActivityRegistry>> | null = null;
@@ -96,7 +98,7 @@ const ensureStackflowInstance = (
   return appStack;
 };
 
-export function NFXStack({ routes, fallbackActivity }: Props) {
+export function NFXStack({ routes, fallbackActivity, children }: Props) {
   const stack = useMemo(
     () => ensureStackflowInstance(routes, fallbackActivity),
     [routes, fallbackActivity]
@@ -119,6 +121,10 @@ export function NFXStack({ routes, fallbackActivity }: Props) {
       registeredActivities.add(name);
     });
   }, [routes, addActivity]);
+
+  if (typeof children === "function") {
+    return <>{children(Stack)}</>;
+  }
 
   return <Stack />;
 }

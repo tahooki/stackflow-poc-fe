@@ -1,15 +1,7 @@
 import "@stackflow/plugin-basic-ui/index.css";
 import "./App.css";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type PointerEvent as ReactPointerEvent,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import DetailActivity from "./activities/DetailActivity";
 import HomeActivity from "./activities/HomeActivity";
@@ -20,11 +12,8 @@ import {
   type ScenarioCard,
 } from "./components/ScenarioPanel";
 import { StackDevtoolsPanel } from "./components/StackDevtoolsPanel";
-import {
-  NFXStack,
-  type StackRouteConfig,
-  getFlowActions,
-} from "./lib/NFXStack";
+import { StackViewportPanel } from "./components/StackViewportPanel";
+import { type StackRouteConfig, getFlowActions } from "./lib/NFXStack";
 import type {
   DevtoolsDataStore,
   DevtoolsMessage,
@@ -77,8 +66,6 @@ const MAX_VIEWPORT = {
   height: 1200,
 };
 
-type ResizeHandle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
-
 type FlowActions = NonNullable<ReturnType<typeof getFlowActions>>;
 
 type Scenario = {
@@ -94,9 +81,6 @@ type Scenario = {
     }
   ) => void;
 };
-
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(Math.max(value, min), max);
 
 const pushWithFlag = (
   actions: FlowActions,
@@ -159,111 +143,8 @@ const useStackflowDevtoolsData = () => {
   return data;
 };
 
-type ResizableViewportProps = {
-  width: number;
-  height: number;
-  onResize: (size: { width: number; height: number }) => void;
-  children: ReactNode;
-};
-
-const ResizableViewport = ({
-  width,
-  height,
-  onResize,
-  children,
-}: ResizableViewportProps) => {
-  const dragStateRef = useRef<{
-    handle: ResizeHandle;
-    startX: number;
-    startY: number;
-    startWidth: number;
-    startHeight: number;
-  } | null>(null);
-
-  const handlePointerDown = useCallback(
-    (handle: ResizeHandle) => (event: ReactPointerEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-      dragStateRef.current = {
-        handle,
-        startX: event.clientX,
-        startY: event.clientY,
-        startWidth: width,
-        startHeight: height,
-      };
-    },
-    [width, height]
-  );
-
-  useEffect(() => {
-    const onPointerMove = (event: PointerEvent) => {
-      const dragState = dragStateRef.current;
-      if (!dragState) {
-        return;
-      }
-
-      const deltaX = event.clientX - dragState.startX;
-      const deltaY = event.clientY - dragState.startY;
-
-      let nextWidth = dragState.startWidth;
-      let nextHeight = dragState.startHeight;
-
-      if (dragState.handle.includes("e")) {
-        nextWidth = dragState.startWidth + deltaX;
-      }
-      if (dragState.handle.includes("w")) {
-        nextWidth = dragState.startWidth - deltaX;
-      }
-      if (dragState.handle.includes("s")) {
-        nextHeight = dragState.startHeight + deltaY;
-      }
-      if (dragState.handle.includes("n")) {
-        nextHeight = dragState.startHeight - deltaY;
-      }
-
-      onResize({
-        width: clamp(nextWidth, MIN_VIEWPORT.width, MAX_VIEWPORT.width),
-        height: clamp(nextHeight, MIN_VIEWPORT.height, MAX_VIEWPORT.height),
-      });
-    };
-
-    const onPointerUp = () => {
-      dragStateRef.current = null;
-    };
-
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-
-    return () => {
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-    };
-  }, [onResize]);
-
-  return (
-    <div
-      className="viewport-frame"
-      style={{ width: `${width}px`, height: `${height}px` }}
-    >
-      <div className="viewport-content">{children}</div>
-      {(["n", "s", "e", "w", "ne", "nw", "se", "sw"] as ResizeHandle[]).map(
-        (handle) => (
-          <button
-            key={handle}
-            type="button"
-            className={`viewport-handle viewport-handle--${handle}`}
-            onPointerDown={handlePointerDown(handle)}
-            aria-label={`Resize ${handle}`}
-          />
-        )
-      )}
-    </div>
-  );
-};
-
 const App = () => {
   const devtoolsData = useStackflowDevtoolsData();
-  const [viewportSize, setViewportSize] = useState(DEFAULT_VIEWPORT);
   const [actions, setActions] = useState<FlowActions | null>(null);
   const [activeScenario, setActiveScenario] = useState<string | null>(null);
   const timeoutsRef = useRef<number[]>([]);
@@ -451,73 +332,12 @@ const App = () => {
         isActionsReady={Boolean(actions)}
       />
 
-      <section className="viewport-panel panel">
-        <header className="panel__header">
-          <h2>스택 플레이그라운드</h2>
-          <span className="panel__meta">
-            width/height를 직접 입력하거나 핸들을 잡아 리사이즈하세요.
-          </span>
-        </header>
-        <div className="viewport-toolbar">
-          <label>
-            W
-            <input
-              type="number"
-              min={MIN_VIEWPORT.width}
-              max={MAX_VIEWPORT.width}
-              value={Math.round(viewportSize.width)}
-              onChange={(event) =>
-                setViewportSize((prev) => ({
-                  ...prev,
-                  width: clamp(
-                    Number(event.target.value),
-                    MIN_VIEWPORT.width,
-                    MAX_VIEWPORT.width
-                  ),
-                }))
-              }
-            />
-          </label>
-          <label>
-            H
-            <input
-              type="number"
-              min={MIN_VIEWPORT.height}
-              max={MAX_VIEWPORT.height}
-              value={Math.round(viewportSize.height)}
-              onChange={(event) =>
-                setViewportSize((prev) => ({
-                  ...prev,
-                  height: clamp(
-                    Number(event.target.value),
-                    MIN_VIEWPORT.height,
-                    MAX_VIEWPORT.height
-                  ),
-                }))
-              }
-            />
-          </label>
-          <button
-            type="button"
-            className="viewport-toolbar__reset"
-            onClick={() => setViewportSize(DEFAULT_VIEWPORT)}
-          >
-            Reset
-          </button>
-        </div>
-
-        <div className="viewport-stage">
-          <ResizableViewport
-            width={viewportSize.width}
-            height={viewportSize.height}
-            onResize={setViewportSize}
-          >
-            <div className="stack-host">
-              <NFXStack routes={stackRoutes} />
-            </div>
-          </ResizableViewport>
-        </div>
-      </section>
+      <StackViewportPanel
+        routes={stackRoutes}
+        defaultSize={DEFAULT_VIEWPORT}
+        minSize={MIN_VIEWPORT}
+        maxSize={MAX_VIEWPORT}
+      />
 
       <StackDevtoolsPanel data={devtoolsData} />
     </div>
