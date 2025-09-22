@@ -6,6 +6,7 @@ import { basicUIPlugin } from "@stackflow/plugin-basic-ui";
 import { basicRendererPlugin } from "@stackflow/plugin-renderer-basic";
 import { historySyncPlugin } from "@stackflow/plugin-history-sync";
 import type { RouteLike } from "@stackflow/plugin-history-sync";
+import { devtoolsPlugin } from "@stackflow/plugin-devtools";
 
 import { navFlagPlugin } from "../plugins/navFlagPlugin";
 
@@ -83,6 +84,7 @@ const ensureStackflowInstance = (
           theme: "android",
         }),
         navFlagPlugin(),
+        devtoolsPlugin(),
         historySyncPlugin({
           routes: historyRoutes,
           fallbackActivity: () => fallbackName,

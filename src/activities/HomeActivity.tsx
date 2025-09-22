@@ -35,14 +35,14 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
           <h2>Quick Navigation Check</h2>
           <p>Use the actions below to grow the stack and observe transitions.</p>
           <div className="activity__actions">
-            <button type="button" onClick={() => push('detail', { id: String(Date.now()) })}>
+            <button type="button" onClick={() => push('Detail', { id: String(Date.now()) })}>
               Push detail screen (baseline)
             </button>
             <button
               type="button"
               onClick={() =>
-                push('detail', { id: '42', title: 'Reused via CLEAR_TOP' }, {
-                  navFlag: { flag: 'CLEAR_TOP', activity: 'detail' },
+                push('Detail', { id: '42', title: 'Reused via CLEAR_TOP' }, {
+                  navFlag: { flag: 'CLEAR_TOP', activity: 'Detail' },
                 })
               }
             >
@@ -51,12 +51,18 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
             <button
               type="button"
               onClick={() =>
-                push('detail', { id: '99', title: 'Jumped from notification' }, {
-                  navFlag: { flag: 'JUMP_TO_CLEAR_TOP', activity: 'detail' },
+                push('Detail', { id: '99', title: 'Jumped from notification' }, {
+                  navFlag: { flag: 'JUMP_TO_CLEAR_TOP', activity: 'Detail' },
                 })
               }
             >
               Jump to Detail 99 (JUMP_TO_CLEAR_TOP)
+            </button>
+            <button type="button" onClick={() => push('Profile', {})}>
+              Push Profile screen
+            </button>
+            <button type="button" onClick={() => push('Settings', {})}>
+              Push Settings screen
             </button>
           </div>
         </section>
