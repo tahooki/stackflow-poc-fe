@@ -488,6 +488,40 @@ const ScenarioWorkspace = ({
     });
   };
 
+  const handleDownloadScenario = useCallback(() => {
+    const exportedActivities = activities.map((activity) => ({
+      id: activity.id,
+      stageName: activity.stageName,
+      activityTitle: activity.title || activity.id,
+      elements: activity.elements,
+    }));
+
+    const entryActivityId = exportedActivities[0]?.id ?? "";
+
+    const scenarioJson = {
+      id: scenario.id,
+      title: scenarioTitle,
+      description: scenarioDescription,
+      flagLabel: scenario.flagLabel,
+      entry: {
+        activityId: entryActivityId,
+      },
+      activities: exportedActivities,
+    };
+
+    const blob = new Blob([JSON.stringify(scenarioJson, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${scenario.id}.json`;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }, [activities, scenario.flagLabel, scenario.id, scenarioTitle, scenarioDescription]);
+
   return (
     <div className="workspace-shell">
       <aside className="workspace-sidebar">
@@ -578,6 +612,14 @@ const ScenarioWorkspace = ({
               disabled={!isActionsReady}
             >
               {isRunning ? "실행중" : "실행"}
+            </button>
+            <button
+              type="button"
+              className="workspace-export"
+              onClick={handleDownloadScenario}
+              disabled={activities.length === 0}
+            >
+              JSON 다운로드
             </button>
           </form>
         </header>
