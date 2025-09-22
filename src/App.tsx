@@ -17,7 +17,7 @@ import type {
 import type { NavFlag } from "./hooks/useNavActions";
 import { NAV_FLAG_INTERNAL_FIELD } from "./plugins/navFlagPlugin";
 import { scenarioHistoryStore } from "./stores/useScenarioHistoryStore";
-import { scenarioDefinitions } from "./scenarios";
+import { buildActivityRouteName, scenarioDefinitions } from "./scenarios";
 import { createScenarioActivityComponent } from "./runtime/ScenarioActivity";
 import { ScenarioRegistryProvider } from "./runtime/ScenarioRegistry";
 
@@ -56,6 +56,48 @@ type Scenario = ScenarioBlueprintWithPush & {
       queue: (cb: () => void, delay: number) => void;
     }
   ) => void;
+};
+
+type WorkspaceState =
+  | { type: "closed" }
+  | { type: "existing"; scenarioId: string }
+  | { type: "draft"; scenario: ScenarioBlueprintWithPush };
+
+const createRandomId = (prefix: string) =>
+  `${prefix}-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
+
+const createScenarioDraft = (): ScenarioBlueprintWithPush => {
+  const scenarioId = createRandomId("custom-scenario");
+  const activityId = createRandomId("activity");
+  const activityName = buildActivityRouteName(scenarioId, activityId);
+  const initialElementId = createRandomId("text");
+
+  return {
+    id: scenarioId,
+    title: "새 시나리오",
+    description: "시나리오 설명을 입력하세요.",
+    flagLabel: "CUSTOM",
+    activities: [
+      {
+        id: activityId,
+        activityName,
+        activityTitle: "첫 Activity",
+        stageName: "Flow Stage",
+        elements: [
+          {
+            id: initialElementId,
+            type: "text",
+            params: {
+              body: "첫 번째 텍스트 블록을 수정해 보세요.",
+              tone: "default",
+            },
+          },
+        ],
+      },
+    ],
+  };
 };
 
 const pushWithFlag = (
@@ -141,9 +183,9 @@ const App = () => {
   const [runningScenarioId, setRunningScenarioId] = useState<string | null>(
     null
   );
-  const [workspaceScenarioId, setWorkspaceScenarioId] = useState<string | null>(
-    null
-  );
+  const [workspaceState, setWorkspaceState] = useState<WorkspaceState>({
+    type: "closed",
+  });
   const timeoutsRef = useRef<number[]>([]);
 
   useEffect(() => {
@@ -321,28 +363,96 @@ const App = () => {
     [actions, queueTimeout, scenarios]
   );
 
-  const workspaceScenario = useMemo(
-    () =>
-      workspaceScenarioId
-        ? scenarioBlueprints.find(
-            (scenario) => scenario.id === workspaceScenarioId
-          ) ?? null
-        : null,
-    [scenarioBlueprints, workspaceScenarioId]
+  const handleWorkspaceOpen = useCallback((scenarioId: string) => {
+    setWorkspaceState({ type: "existing", scenarioId });
+  }, []);
+
+  const handleWorkspaceClose = useCallback(() => {
+    setWorkspaceState({ type: "closed" });
+  }, []);
+
+  const handleCreateScenario = useCallback(() => {
+    setWorkspaceState({ type: "draft", scenario: createScenarioDraft() });
+  }, []);
+
+  const workspaceScenario = useMemo(() => {
+    if (workspaceState.type === "existing") {
+      return (
+        scenarioBlueprints.find(
+          (scenario) => scenario.id === workspaceState.scenarioId
+        ) ?? null
+      );
+    }
+
+    if (workspaceState.type === "draft") {
+      return workspaceState.scenario;
+    }
+
+    return null;
+  }, [scenarioBlueprints, workspaceState]);
+
+  useEffect(() => {
+    if (workspaceState.type !== "existing") {
+      return;
+    }
+
+    const exists = scenarioBlueprints.some(
+      (scenario) => scenario.id === workspaceState.scenarioId
+    );
+
+    if (!exists) {
+      setWorkspaceState({ type: "closed" });
+    }
+  }, [scenarioBlueprints, workspaceState]);
+
+  const handleWorkspaceMeta = useCallback(
+    (meta: { title: string; description: string }) => {
+      if (!workspaceScenario) {
+        return;
+      }
+
+      if (workspaceState.type === "existing") {
+        handleScenarioMetaUpdate(workspaceScenario.id, meta);
+        return;
+      }
+
+      if (workspaceState.type === "draft") {
+        setWorkspaceState((current) =>
+          current.type === "draft"
+            ? {
+                type: "draft",
+                scenario: {
+                  ...current.scenario,
+                  title: meta.title,
+                  description: meta.description,
+                },
+              }
+            : current
+        );
+      }
+    },
+    [handleScenarioMetaUpdate, workspaceScenario, workspaceState]
   );
 
   return (
     <ScenarioRegistryProvider scenarios={scenarios}>
-      {workspaceScenario ? (
+      {workspaceState.type !== "closed" && workspaceScenario ? (
         <ScenarioWorkspace
           scenario={workspaceScenario}
-          onClose={() => setWorkspaceScenarioId(null)}
-          onRun={() => handleScenarioRun(workspaceScenario.id)}
-          isActionsReady={Boolean(actions)}
-          isRunning={runningScenarioId === workspaceScenario.id}
-          onUpdateScenarioMeta={(meta) =>
-            handleScenarioMetaUpdate(workspaceScenario.id, meta)
+          onClose={handleWorkspaceClose}
+          onRun={
+            workspaceState.type === "existing"
+              ? () => handleScenarioRun(workspaceState.scenarioId)
+              : () => undefined
           }
+          isActionsReady={
+            workspaceState.type === "existing" ? Boolean(actions) : false
+          }
+          isRunning={
+            workspaceState.type === "existing" &&
+            runningScenarioId === workspaceState.scenarioId
+          }
+          onUpdateScenarioMeta={handleWorkspaceMeta}
         />
       ) : (
         <div className="app-shell">
@@ -351,8 +461,8 @@ const App = () => {
             activeScenarioId={activeScenario}
             runningScenarioId={runningScenarioId}
             onRunScenario={handleScenarioRun}
-            onOpenScenario={setWorkspaceScenarioId}
-            isActionsReady={Boolean(actions)}
+            onOpenScenario={handleWorkspaceOpen}
+            onCreateScenario={handleCreateScenario}
           />
 
           <StackViewportPanel
