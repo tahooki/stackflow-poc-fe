@@ -70,7 +70,7 @@ const createNavigateDefaults = (): ScenarioElementNavigate => ({
   type: "navigate",
   params: {
     label: "Detail push",
-    activityName: "detail",
+    targetActivityId: "activity-id",
     params: { id: "example" },
     flagBadge: "DEFAULT",
   },
@@ -143,11 +143,11 @@ const ScenarioWorkspace = ({
   );
 
   useEffect(() => {
-    const mappedActivities = scenario.stages.map((stage, index) => ({
-      id: stage.id,
-      title: stage.activityTitle || `Activity ${index + 1}`,
-      stageName: stage.stageName,
-      elements: stage.elements,
+    const mappedActivities = scenario.activities.map((activity, index) => ({
+      id: activity.id,
+      title: activity.activityTitle || `Activity ${index + 1}`,
+      stageName: activity.stageName,
+      elements: activity.elements,
     }));
 
     if (mappedActivities.length === 0) {
@@ -438,7 +438,7 @@ const ScenarioWorkspace = ({
           <div className="workspace-element workspace-element--navigate">
             <span className="workspace-element__eyebrow">NAVIGATE</span>
             <strong>{element.params.label}</strong>
-            <small>{element.params.activityName}</small>
+            <small>{element.params.targetActivityId}</small>
           </div>
         );
       case "modal":
@@ -698,14 +698,14 @@ const ScenarioWorkspace = ({
                     />
                   </label>
                   <label className="workspace-input">
-                    <span>Activity 이름</span>
+                    <span>Target Activity ID</span>
                     <input
                       type="text"
-                      value={selectedElement.params.activityName}
+                      value={selectedElement.params.targetActivityId}
                       onChange={(event) =>
                         handleNavigateChange(
                           selectedElement,
-                          "activityName",
+                          "targetActivityId",
                           event.target.value
                         )
                       }
