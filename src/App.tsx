@@ -17,9 +17,7 @@ import type {
 import type { NavFlag } from "./hooks/useNavActions";
 import { NAV_FLAG_INTERNAL_FIELD } from "./plugins/navFlagPlugin";
 import { scenarioHistoryStore } from "./stores/useScenarioHistoryStore";
-import {
-  scenarioDefinitions,
-} from "./scenarios";
+import { scenarioDefinitions } from "./scenarios";
 import { createScenarioActivityComponent } from "./runtime/ScenarioActivity";
 import { ScenarioRegistryProvider } from "./runtime/ScenarioRegistry";
 
@@ -78,16 +76,18 @@ const pushWithFlag = (
 };
 
 const resetStackToEntry = (actions: FlowActions, entry: ScenarioEntry) => {
-  const stack = actions.getStack();
-  if (stack.activities.length > 0) {
-    actions.pop(stack.activities.length, { animate: false });
-  }
+  const entryParams =
+    entry.params ?? ({} as Parameters<FlowActions["push"]>[1]);
 
-  const entryParams = entry.params ?? ({} as Parameters<FlowActions["push"]>[1]);
-
-  pushWithFlag(actions, entry.activityName, entryParams, undefined, {
-    animate: false,
-  });
+  // Use CLEAR_STACK via navFlag plugin to ensure the stack is fully reset
+  // before pushing the entry activity. This avoids relying on pop(count).
+  pushWithFlag(
+    actions,
+    entry.activityName,
+    entryParams,
+    { flag: "CLEAR_STACK" } as NavFlag,
+    { animate: false }
+  );
 };
 
 const useStackflowDevtoolsData = () => {
@@ -141,9 +141,9 @@ const App = () => {
   const [runningScenarioId, setRunningScenarioId] = useState<string | null>(
     null
   );
-  const [workspaceScenarioId, setWorkspaceScenarioId] = useState<
-    string | null
-  >(null);
+  const [workspaceScenarioId, setWorkspaceScenarioId] = useState<string | null>(
+    null
+  );
   const timeoutsRef = useRef<number[]>([]);
 
   useEffect(() => {
@@ -173,10 +173,12 @@ const App = () => {
 
   const baseScenarios = useMemo<Scenario[]>(
     () =>
-      scenarioDefinitions.map((scenario): Scenario => ({
-        ...scenario,
-        run: undefined,
-      })),
+      scenarioDefinitions.map(
+        (scenario): Scenario => ({
+          ...scenario,
+          run: undefined,
+        })
+      ),
     []
   );
 
@@ -227,7 +229,8 @@ const App = () => {
     scenarios.forEach((scenario) => {
       scenario.activities.forEach((activity) => {
         const isInitial =
-          !initialAssigned && scenario.entry.activityName === activity.activityName;
+          !initialAssigned &&
+          scenario.entry.activityName === activity.activityName;
         if (isInitial) {
           initialAssigned = true;
         }
@@ -252,7 +255,9 @@ const App = () => {
   const handleScenarioMetaUpdate = useCallback(
     (scenarioId: string, meta: { title: string; description: string }) => {
       setScenarioMetaOverrides((prev) => {
-        const base = baseScenarios.find((scenario) => scenario.id === scenarioId);
+        const base = baseScenarios.find(
+          (scenario) => scenario.id === scenarioId
+        );
         const isSameAsBase =
           base?.title === meta.title && base?.description === meta.description;
         if (isSameAsBase) {
@@ -288,7 +293,9 @@ const App = () => {
         return;
       }
 
-      const scenario = scenarios.find((candidate) => candidate.id === scenarioId);
+      const scenario = scenarios.find(
+        (candidate) => candidate.id === scenarioId
+      );
       if (!scenario) {
         return;
       }

@@ -103,7 +103,9 @@ const createBottomSheetDefaults = (): ScenarioElementBottomSheet => ({
   },
 });
 
-const buildElementDefaults = (type: ScenarioElement["type"]): ScenarioElement => {
+const buildElementDefaults = (
+  type: ScenarioElement["type"]
+): ScenarioElement => {
   switch (type) {
     case "navigate":
       return createNavigateDefaults();
@@ -173,7 +175,8 @@ const ScenarioWorkspace = ({
   }, [scenario]);
 
   const selectedActivity = useMemo(
-    () => activities.find((activity) => activity.id === selectedActivityId) || null,
+    () =>
+      activities.find((activity) => activity.id === selectedActivityId) || null,
     [activities, selectedActivityId]
   );
 
@@ -182,8 +185,9 @@ const ScenarioWorkspace = ({
       return null;
     }
     return (
-      selectedActivity.elements.find((element) => element.id === selectedElementId) ||
-      null
+      selectedActivity.elements.find(
+        (element) => element.id === selectedElementId
+      ) || null
     );
   }, [selectedActivity, selectedElementId]);
 
@@ -219,7 +223,10 @@ const ScenarioWorkspace = ({
   }, [selectedElement]);
 
   const updateActivity = useCallback(
-    (activityId: string, updater: (activity: ActivityDraft) => ActivityDraft) => {
+    (
+      activityId: string,
+      updater: (activity: ActivityDraft) => ActivityDraft
+    ) => {
       setActivities((current) =>
         current.map((activity) =>
           activity.id === activityId ? updater(activity) : activity
@@ -285,9 +292,7 @@ const ScenarioWorkspace = ({
     setSelectedElementId(elementId);
   };
 
-  const handleTextChange = <
-    Key extends keyof ScenarioElementText["params"]
-  >(
+  const handleTextChange = <Key extends keyof ScenarioElementText["params"]>(
     element: ScenarioElementText,
     field: Key,
     value: ScenarioElementText["params"][Key]
@@ -496,7 +501,9 @@ const ScenarioWorkspace = ({
               <input
                 type="text"
                 value={scenarioTitle}
-                onChange={(event) => handleScenarioTitleChange(event.target.value)}
+                onChange={(event) =>
+                  handleScenarioTitleChange(event.target.value)
+                }
                 placeholder="시나리오 제목"
               />
             </label>
@@ -557,7 +564,10 @@ const ScenarioWorkspace = ({
             <span className="workspace-canvas__label">캔버스</span>
             <h2>{selectedActivity?.title ?? "선택된 Activity 없음"}</h2>
           </div>
-          <form className="workspace-canvas__controls" onSubmit={handleRunScenario}>
+          <form
+            className="workspace-canvas__controls"
+            onSubmit={handleRunScenario}
+          >
             <button
               type="submit"
               className={
@@ -670,7 +680,8 @@ const ScenarioWorkspace = ({
                         handleTextChange(
                           selectedElement,
                           "tone",
-                          event.target.value as ScenarioElementText["params"]["tone"]
+                          event.target
+                            .value as ScenarioElementText["params"]["tone"]
                         )
                       }
                     >
@@ -728,9 +739,7 @@ const ScenarioWorkspace = ({
                   <label className="workspace-input">
                     <span>NAV Flag</span>
                     <div className="workspace-input__group">
-                      <input
-                        type="text"
-                        placeholder="flag"
+                      <select
                         value={navFlagDraft.flag}
                         onChange={(event) =>
                           handleNavFlagDraftChange(selectedElement, {
@@ -738,19 +747,36 @@ const ScenarioWorkspace = ({
                             activity: navFlagDraft.activity,
                           })
                         }
-                      />
-                      <input
-                        type="text"
-                        placeholder="activity"
-                        value={navFlagDraft.activity}
-                        onChange={(event) =>
-                          handleNavFlagDraftChange(selectedElement, {
-                            flag: navFlagDraft.flag,
-                            activity: event.target.value,
-                          })
-                        }
-                      />
+                      >
+                        <option value="">선택 없음</option>
+                        <option value="SINGLE_TOP">SINGLE_TOP</option>
+                        <option value="CLEAR_TOP">CLEAR_TOP</option>
+                        <option value="CLEAR_STACK">CLEAR_STACK</option>
+                        <option value="JUMP_TO">JUMP_TO</option>
+                        <option value="CLEAR_TOP_SINGLE_TOP">
+                          CLEAR_TOP_SINGLE_TOP
+                        </option>
+                        <option value="JUMP_TO_CLEAR_TOP">
+                          JUMP_TO_CLEAR_TOP
+                        </option>
+                      </select>
                     </div>
+                    <input
+                      type="text"
+                      placeholder="activity"
+                      value={navFlagDraft.activity}
+                      disabled={
+                        !requiresActivityFlags.includes(
+                          navFlagDraft.flag as NavFlag["flag"]
+                        )
+                      }
+                      onChange={(event) =>
+                        handleNavFlagDraftChange(selectedElement, {
+                          flag: navFlagDraft.flag,
+                          activity: event.target.value,
+                        })
+                      }
+                    />
                   </label>
                   <label className="workspace-input">
                     <span>Params (JSON)</span>
