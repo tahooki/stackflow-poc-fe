@@ -15,14 +15,13 @@ type ScenarioElementText = ScenarioElementBase<
 >;
 
 type ScenarioElementNavigate<
-  ActivityName = string,
   ActivityParams = Record<string, unknown> | undefined,
   PushOptions = unknown
 > = ScenarioElementBase<
   "navigate",
   {
     label: string;
-    activityName: ActivityName;
+    targetActivityId: string;
     params?: ActivityParams;
     navFlag?: NavFlag;
     options?: PushOptions;
@@ -47,28 +46,26 @@ type ScenarioElementBottomSheet = ScenarioElementBase<
 >;
 
 type ScenarioElement<
-  ActivityName = string,
   ActivityParams = Record<string, unknown> | undefined,
   PushOptions = unknown
 > =
   | ScenarioElementText
-  | ScenarioElementNavigate<ActivityName, ActivityParams, PushOptions>
+  | ScenarioElementNavigate<ActivityParams, PushOptions>
   | ScenarioElementModal
   | ScenarioElementBottomSheet;
 
-type ScenarioStage<
-  ActivityName = string,
+type ScenarioActivity<
   ActivityParams = Record<string, unknown> | undefined,
   PushOptions = unknown
 > = {
   id: string;
+  activityName: string;
   stageName: string;
   activityTitle: string;
-  elements: ScenarioElement<ActivityName, ActivityParams, PushOptions>[];
+  elements: ScenarioElement<ActivityParams, PushOptions>[];
 };
 
 type ScenarioBlueprint<
-  ActivityName = string,
   ActivityParams = Record<string, unknown> | undefined,
   PushOptions = unknown
 > = {
@@ -76,7 +73,7 @@ type ScenarioBlueprint<
   title: string;
   description: string;
   flagLabel: string;
-  stages: ScenarioStage<ActivityName, ActivityParams, PushOptions>[];
+  activities: ScenarioActivity<ActivityParams, PushOptions>[];
 };
 
 export type {
@@ -86,5 +83,5 @@ export type {
   ScenarioElementModal,
   ScenarioElementNavigate,
   ScenarioElementText,
-  ScenarioStage,
+  ScenarioActivity,
 };

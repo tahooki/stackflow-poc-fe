@@ -43,7 +43,8 @@ const sanitizeRecord = <T extends UnknownRecord | undefined>(params: T): T => {
     return params;
   }
 
-  const { [NAV_FLAG_FIELD]: _ignored, ...rest } = params as NavFlagCarrier;
+  const rest = { ...(params as NavFlagCarrier) };
+  delete rest[NAV_FLAG_FIELD];
   return rest as T;
 };
 
@@ -67,7 +68,11 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({ acti
 
   if (!navFlag) {
     // 플래그는 없지만 내부 키가 남아있다면, 호출부 params가 노출되지 않도록 제거합니다.
-    if ((actionParams.activityParams as UnknownRecord | undefined)?.hasOwnProperty?.(NAV_FLAG_FIELD)) {
+    const activityParams = actionParams.activityParams as UnknownRecord | undefined;
+    if (
+      activityParams &&
+      Object.prototype.hasOwnProperty.call(activityParams, NAV_FLAG_FIELD)
+    ) {
       actions.overrideActionParams({
         ...actionParams,
         activityParams: sanitizeRecord(actionParams.activityParams as UnknownRecord) as ActivityParamsShape,

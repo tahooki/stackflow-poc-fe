@@ -1,0 +1,113 @@
+{
+  "scenarios": [
+    {
+      "id": "stack-basic-flow",
+      "title": "스택 기본 흐름",
+      "description": "A → B → C 후 CLEAR_TOP으로 B 복귀 시 플래그 동작을 검증합니다.",
+      "flagLabel": "STACK",
+      "entry": {
+        "activityId": "activity-a"
+      },
+      "activities": [
+        {
+          "id": "activity-a",
+          "stageName": "Flow Stage",
+          "activityTitle": "Activity A",
+          "elements": [
+            {
+              "id": "activity-a-intro",
+              "type": "text",
+              "params": {
+                "body": "시작 화면입니다. 아래 버튼을 눌러 Activity B로 이동합니다."
+              }
+            },
+            {
+              "id": "activity-a-forward",
+              "type": "navigate",
+              "params": {
+                "label": "Go to Activity B",
+                "targetActivityId": "activity-b",
+                "flagBadge": "PUSH"
+              }
+            },
+            {
+              "id": "activity-a-note",
+              "type": "text",
+              "params": {
+                "body": "스택 최상단에는 항상 가장 마지막에 push된 Activity가 위치합니다.",
+                "tone": "muted"
+              }
+            }
+          ]
+        },
+        {
+          "id": "activity-b",
+          "stageName": "Flow Stage",
+          "activityTitle": "Activity B",
+          "elements": [
+            {
+              "id": "activity-b-intro",
+              "type": "text",
+              "params": {
+                "body": "Activity B입니다. 여러 플래그를 시험해 보세요."
+              }
+            },
+            {
+              "id": "activity-b-forward",
+              "type": "navigate",
+              "params": {
+                "label": "Push Activity C",
+                "targetActivityId": "activity-c",
+                "flagBadge": "PUSH"
+              }
+            },
+            {
+              "id": "activity-b-single-top",
+              "type": "navigate",
+              "params": {
+                "label": "Re-enter B (SINGLE_TOP)",
+                "targetActivityId": "activity-b",
+                "navFlag": { "flag": "SINGLE_TOP" },
+                "flagBadge": "SINGLE_TOP"
+              }
+            }
+          ]
+        },
+        {
+          "id": "activity-c",
+          "stageName": "Flow Stage",
+          "activityTitle": "Activity C",
+          "elements": [
+            {
+              "id": "activity-c-intro",
+              "type": "text",
+              "params": {
+                "body": "Activity C입니다. CLEAR_TOP으로 B를 최상단으로 끌어올립니다."
+              }
+            },
+            {
+              "id": "activity-c-clear-top",
+              "type": "navigate",
+              "params": {
+                "label": "CLEAR_TOP to Activity B",
+                "targetActivityId": "activity-b",
+                "navFlag": { "flag": "CLEAR_TOP", "activity": "activity-b" },
+                "flagBadge": "CLEAR_TOP"
+              }
+            },
+            {
+              "id": "activity-c-home",
+              "type": "navigate",
+              "params": {
+                "label": "CLEAR_STACK (Reset)",
+                "targetActivityId": "activity-a",
+                "navFlag": { "flag": "CLEAR_STACK" },
+                "flagBadge": "CLEAR_STACK"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
