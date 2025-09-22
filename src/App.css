@@ -161,6 +161,31 @@ body {
   cursor: pointer;
 }
 
+/* Edit icon button on scenario card */
+.scenario-card__compact-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.75);
+  color: #0f172a;
+  cursor: pointer;
+  margin-left: auto;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+.scenario-card__compact-edit:hover {
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+}
+
+.scenario-card[data-running="true"] .scenario-card__compact-edit {
+  background: rgba(219, 234, 254, 0.8);
+  color: #1d4ed8;
+}
+
 .scenario-card__content p {
   margin: 0;
   color: #475569;

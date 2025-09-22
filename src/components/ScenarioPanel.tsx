@@ -2,10 +2,7 @@ import { memo } from "react";
 
 import type { ScenarioBlueprint } from "./ScenarioPanel.types";
 
-type ScenarioSummary = Pick<
-  ScenarioBlueprint,
-  "id" | "title" | "description"
->;
+type ScenarioSummary = Pick<ScenarioBlueprint, "id" | "title" | "description">;
 
 type ScenarioPanelProps = {
   scenarios: ReadonlyArray<ScenarioSummary>;
@@ -44,13 +41,14 @@ const ScenarioPanelComponent = ({
                 ? "scenario-card scenario-card--compact scenario-card--active"
                 : "scenario-card scenario-card--compact"
             }
+            data-running={isRunning ? "true" : undefined}
           >
             <div className="scenario-card__compact-body">
               <div className="scenario-card__header">
                 <button
                   type="button"
                   className="scenario-card__header-main"
-                  onClick={() => onOpenScenario(scenario.id)}
+                  onClick={() => onRunScenario(scenario.id)}
                 >
                   <span className="scenario-card__index" aria-hidden>
                     {index + 1}
@@ -59,21 +57,32 @@ const ScenarioPanelComponent = ({
                 </button>
                 <button
                   type="button"
-                  className={
-                    isRunning
-                      ? "scenario-card__compact-run scenario-card__compact-run--running"
-                      : "scenario-card__compact-run"
-                  }
-                  onClick={() => onRunScenario(scenario.id)}
-                  disabled={!isActionsReady}
+                  className="scenario-card__compact-edit"
+                  onClick={() => onOpenScenario(scenario.id)}
+                  aria-label="시나리오 편집"
                 >
-                  {isRunning ? "실행중" : "실행"}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    aria-hidden
+                  >
+                    <path
+                      d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"
+                      fill="currentColor"
+                    />
+                    <path
+                      d="M20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z"
+                      fill="currentColor"
+                    />
+                  </svg>
                 </button>
               </div>
               <button
                 type="button"
                 className="scenario-card__content"
-                onClick={() => onOpenScenario(scenario.id)}
+                onClick={() => onRunScenario(scenario.id)}
               >
                 <p>{scenario.description}</p>
               </button>
