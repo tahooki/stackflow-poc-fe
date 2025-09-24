@@ -64,6 +64,9 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
             <button type="button" onClick={() => push('Settings', {})}>
               Push Settings screen
             </button>
+            <button type="button" onClick={() => push('LabsPerformance', {})}>
+              Open performance lab
+            </button>
           </div>
         </section>
 
