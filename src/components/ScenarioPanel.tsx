@@ -11,6 +11,8 @@ type ScenarioPanelProps = {
   onRunScenario: (scenarioId: string) => void;
   onOpenScenario: (scenarioId: string) => void;
   onCreateScenario: () => void;
+  onOpenLabs?: () => void;
+  labsDisabled?: boolean;
 };
 
 const ScenarioPanelComponent = ({
@@ -20,6 +22,8 @@ const ScenarioPanelComponent = ({
   onRunScenario,
   onOpenScenario,
   onCreateScenario,
+  onOpenLabs,
+  labsDisabled = false,
 }: ScenarioPanelProps) => (
   <section className="panel scenario-panel">
     <header className="panel__header scenario-panel__header">
@@ -29,16 +33,28 @@ const ScenarioPanelComponent = ({
           NAV 플래그 케이스와 상태 유지 흐름을 빠르게 실행합니다.
         </span>
       </div>
-      <button
-        type="button"
-        className="scenario-panel__create"
-        onClick={onCreateScenario}
-      >
-        + 시나리오 추가
-      </button>
+      <div className="scenario-panel__actions">
+        {onOpenLabs ? (
+          <button
+            type="button"
+            className="scenario-panel__labs"
+            onClick={onOpenLabs}
+            disabled={labsDisabled}
+          >
+            Labs 실험
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="scenario-panel__create"
+          onClick={onCreateScenario}
+        >
+          + 시나리오 추가
+        </button>
+      </div>
     </header>
     <ul className="scenario-list scenario-list--compact">
-      {scenarios.map((scenario, index) => {
+      {scenarios.map((scenario, index) => { 
         const isActive = activeScenarioId === scenario.id;
         const isRunning = runningScenarioId === scenario.id;
 

@@ -1,0 +1,32 @@
+.ag-theme-quartz {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: rgba(248, 250, 252, 0.92);
+  border-radius: 18px;
+  padding: 12px;
+  box-sizing: border-box;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.ag-theme-quartz .ag-grid-stub__viewport {
+  border-color: rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.ag-theme-quartz .ag-grid-stub__table tbody tr:nth-child(even) {
+  background: rgba(226, 232, 240, 0.35);
+}
+
+.ag-theme-quartz .ag-grid-stub__table tbody tr:hover {
+  background: rgba(191, 219, 254, 0.55);
+}
+
+.ag-theme-quartz .ag-grid-stub__pagination button {
+  background: linear-gradient(135deg, rgba(8, 145, 178, 0.85), rgba(2, 132, 199, 0.88));
+}
+
+.ag-theme-quartz .ag-grid-stub__pagination button:hover:not(:disabled) {
+  box-shadow: 0 8px 18px rgba(2, 132, 199, 0.28);
+}

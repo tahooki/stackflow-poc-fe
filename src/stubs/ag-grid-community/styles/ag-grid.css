@@ -1,0 +1,145 @@
+.ag-grid-stub {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  font-family: "Inter", "Pretendard", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.ag-grid-stub__viewport {
+  flex: 1 1 auto;
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.ag-grid-stub__table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.ag-grid-stub__table thead {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(180deg, rgba(226, 232, 240, 0.92), rgba(241, 245, 249, 0.92));
+  backdrop-filter: blur(4px);
+  z-index: 1;
+}
+
+.ag-grid-stub__table th,
+.ag-grid-stub__table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  text-align: left;
+  vertical-align: top;
+}
+
+.ag-grid-stub__table th {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #1e293b;
+  cursor: default;
+  position: relative;
+}
+
+.ag-grid-stub__header--sortable {
+  cursor: pointer;
+}
+
+.ag-grid-stub__header--sortable:hover {
+  color: #1d4ed8;
+}
+
+.ag-grid-stub__header-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.ag-grid-stub__sort-indicator {
+  font-size: 0.7rem;
+  color: rgba(15, 23, 42, 0.5);
+}
+
+.ag-grid-stub__filter {
+  margin-top: 8px;
+}
+
+.ag-grid-stub__filter input {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 0.8rem;
+  background: rgba(248, 250, 252, 0.8);
+  color: #0f172a;
+}
+
+.ag-grid-stub__filter input:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.65);
+  outline-offset: 2px;
+}
+
+.ag-grid-stub__table tbody tr:nth-child(even) {
+  background: rgba(241, 245, 249, 0.6);
+}
+
+.ag-grid-stub__table tbody tr:hover {
+  background: rgba(191, 219, 254, 0.45);
+}
+
+.ag-grid-stub__table td {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #1f2937;
+}
+
+.ag-grid-stub__empty {
+  text-align: center;
+  padding: 48px 0;
+  color: rgba(15, 23, 42, 0.6);
+}
+
+.ag-grid-stub__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  font-size: 0.85rem;
+}
+
+.ag-grid-stub__pagination button {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.85), rgba(37, 99, 235, 0.85));
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ag-grid-stub__pagination button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(59, 130, 246, 0.28);
+}
+
+.ag-grid-stub__pagination button:disabled {
+  cursor: not-allowed;
+  background: rgba(148, 163, 184, 0.6);
+  box-shadow: none;
+}
+
+.ag-grid-stub__pagination span {
+  color: rgba(15, 23, 42, 0.7);
+}

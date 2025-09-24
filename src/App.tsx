@@ -10,6 +10,10 @@ import { StackDevtoolsPanel } from "./components/StackDevtoolsPanel";
 import { StackViewportPanel } from "./components/StackViewportPanel";
 import { ScenarioWorkspace } from "./components/ScenarioWorkspace";
 import { type StackRouteConfig, getFlowActions } from "./lib/NFXStack";
+import {
+  LABS_AG_GRID_ACTIVITY_NAME,
+  LabsAgGridActivity,
+} from "./labs/LabsAgGridActivity";
 import type {
   DevtoolsDataStore,
   DevtoolsMessage,
@@ -291,6 +295,14 @@ const App = () => {
       });
     });
 
+    routes.push({
+      name: LABS_AG_GRID_ACTIVITY_NAME,
+      activity: LabsAgGridActivity,
+      route: {
+        path: "/labs/ag-grid",
+      },
+    });
+
     return routes;
   }, [scenarios]);
 
@@ -374,6 +386,19 @@ const App = () => {
   const handleCreateScenario = useCallback(() => {
     setWorkspaceState({ type: "draft", scenario: createScenarioDraft() });
   }, []);
+
+  const handleOpenLabs = useCallback(() => {
+    if (!actions) {
+      return;
+    }
+
+    const params = {} as Parameters<FlowActions["push"]>[1];
+    pushWithFlag(actions, LABS_AG_GRID_ACTIVITY_NAME, params, {
+      flag: "CLEAR_STACK",
+    } as NavFlag);
+    setActiveScenario(null);
+    setRunningScenarioId(null);
+  }, [actions]);
 
   const workspaceScenario = useMemo(() => {
     if (workspaceState.type === "existing") {
@@ -463,6 +488,8 @@ const App = () => {
             onRunScenario={handleScenarioRun}
             onOpenScenario={handleWorkspaceOpen}
             onCreateScenario={handleCreateScenario}
+            onOpenLabs={handleOpenLabs}
+            labsDisabled={!actions}
           />
 
           <StackViewportPanel

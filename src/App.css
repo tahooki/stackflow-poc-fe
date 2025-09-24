@@ -61,6 +61,45 @@ body {
   gap: 6px;
 }
 
+.scenario-panel__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+}
+
+@media (min-width: 720px) {
+  .scenario-panel__actions {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+}
+
+.scenario-panel__labs {
+  align-self: flex-start;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.32);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.scenario-panel__labs:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 32px rgba(37, 99, 235, 0.35);
+}
+
+.scenario-panel__labs:disabled {
+  cursor: not-allowed;
+  background: rgba(148, 163, 184, 0.6);
+  box-shadow: none;
+}
+
 .scenario-panel__create {
   align-self: flex-start;
   border: none;
@@ -196,6 +235,74 @@ body {
   color: inherit;
   padding: 0;
   cursor: pointer;
+}
+
+.labs-ag-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+  min-height: 100%;
+  box-sizing: border-box;
+  color: #0f172a;
+  background: linear-gradient(
+    160deg,
+    rgba(240, 249, 255, 0.92) 0%,
+    rgba(224, 242, 254, 0.85) 100%
+  );
+}
+
+.labs-ag-grid__intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.labs-ag-grid__intro h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #1e293b;
+}
+
+.labs-ag-grid__intro p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.labs-ag-grid__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.labs-ag-grid__stats article {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 10px 24px rgba(14, 116, 144, 0.18);
+}
+
+.labs-ag-grid__stat-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(15, 23, 42, 0.6);
+}
+
+.labs-ag-grid__stats strong {
+  font-size: 1.4rem;
+  color: #0f172a;
+}
+
+.labs-ag-grid__grid {
+  flex: 1 1 auto;
+  min-height: 420px;
 }
 
 /* Edit icon button on scenario card */

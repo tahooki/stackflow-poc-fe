@@ -15,6 +15,13 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "ag-grid-react": ["src/stubs/ag-grid-react"],
+      "ag-grid-react/*": ["src/stubs/ag-grid-react/*"],
+      "ag-grid-community": ["src/stubs/ag-grid-community"],
+      "ag-grid-community/*": ["src/stubs/ag-grid-community/*"]
+    },
 
     /* Linting */
     "strict": true,
