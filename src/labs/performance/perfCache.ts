@@ -24,6 +24,18 @@ class PerfCacheStore {
 
   private listeners = new Set<() => void>();
 
+  private snapshotCache: PerfCacheSnapshot = {
+    entries: [],
+    totalMB: 0,
+  };
+
+  private summaryCache: SummarySnapshot = {
+    entryCount: 0,
+    totalMB: 0,
+  };
+
+  private cacheDirty = true;
+
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
     return () => {
@@ -35,8 +47,40 @@ class PerfCacheStore {
     this.listeners.forEach((listener) => listener());
   }
 
+  private invalidateCaches() {
+    this.cacheDirty = true;
+  }
+
+  private ensureCaches() {
+    if (!this.cacheDirty) {
+      return;
+    }
+
+    const entries = Array.from(this.entries.values()).sort(
+      (a, b) => b.lastAccessed - a.lastAccessed,
+    );
+
+    let total = 0;
+    entries.forEach((entry) => {
+      total += entry.sizeMB;
+    });
+
+    const totalMB = total;
+
+    this.snapshotCache = {
+      entries,
+      totalMB,
+    };
+    this.summaryCache = {
+      entryCount: entries.length,
+      totalMB: Number(totalMB.toFixed(2)),
+    };
+    this.cacheDirty = false;
+  }
+
   write(entry: PerfCacheEntry) {
     this.entries.set(entry.activityId, entry);
+    this.invalidateCaches();
     this.emit();
   }
 
@@ -50,11 +94,13 @@ class PerfCacheStore {
       ...current,
       lastAccessed: Date.now(),
     });
+    this.invalidateCaches();
     this.emit();
   }
 
   remove(activityId: string) {
     if (this.entries.delete(activityId)) {
+      this.invalidateCaches();
       this.emit();
     }
   }
@@ -65,6 +111,7 @@ class PerfCacheStore {
     }
 
     this.entries.clear();
+    this.invalidateCaches();
     this.emit();
   }
 
@@ -87,6 +134,7 @@ class PerfCacheStore {
       total -= entry.sizeMB;
     }
 
+    this.invalidateCaches();
     this.emit();
   }
 
@@ -95,20 +143,13 @@ class PerfCacheStore {
   }
 
   getSnapshot(): PerfCacheSnapshot {
-    const entries = Array.from(this.entries.values()).sort(
-      (a, b) => b.lastAccessed - a.lastAccessed,
-    );
-    return {
-      entries,
-      totalMB: this.computeTotalMB(),
-    };
+    this.ensureCaches();
+    return this.snapshotCache;
   }
 
   getSummary(): SummarySnapshot {
-    return {
-      entryCount: this.entries.size,
-      totalMB: Number(this.computeTotalMB().toFixed(2)),
-    };
+    this.ensureCaches();
+    return this.summaryCache;
   }
 
   private computeTotalMB() {
