@@ -4,6 +4,8 @@ import "./App.css";
 import DetailActivity from "./activities/DetailActivity";
 import FeedActivity from "./activities/FeedActivity";
 import HomeActivity from "./activities/HomeActivity";
+import LabsPerformanceActivity from "./activities/LabsPerformanceActivity";
+import LabsPerformanceDetailActivity from "./activities/LabsPerformanceDetailActivity";
 import ProfileActivity from "./activities/ProfileActivity";
 import SettingsActivity from "./activities/SettingsActivity";
 import { NFXStack, type StackRouteConfig } from "./lib/NFXStack";
@@ -36,6 +38,18 @@ const stackRoutes: StackRouteConfig[] = [
     name: "Feed",
     activity: FeedActivity,
     route: "/feed",
+  },
+  {
+    name: "LabsPerformance",
+    activity: LabsPerformanceActivity,
+    route: "/labs/performance",
+  },
+  {
+    name: "LabsPerformanceDetail",
+    activity: LabsPerformanceDetailActivity,
+    route: {
+      path: "/labs/performance/:mode/:id",
+    },
   },
 ];
 
