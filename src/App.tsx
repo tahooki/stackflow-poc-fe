@@ -3,6 +3,7 @@ import "./App.css";
 
 import ChartActivity from "./activities/ChartActivity";
 import HomeActivity from "./activities/HomeActivity";
+import MemoryStressActivity from "./activities/MemoryStressActivity";
 import TableActivity from "./activities/TableActivity";
 import { NFXStack, type StackRouteConfig } from "./lib/NFXStack";
 import { initializeWaferDataset } from "./lib/waferDataset";
@@ -25,6 +26,11 @@ const stackRoutes: StackRouteConfig[] = [
     name: "chart",
     activity: ChartActivity,
     route: "/chart",
+  },
+  {
+    name: "memory",
+    activity: MemoryStressActivity,
+    route: "/memory",
   },
 ];
 

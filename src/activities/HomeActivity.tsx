@@ -70,6 +70,17 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
               <button type="button" onClick={() => push("chart", {})}>
                 Open Chart Activity
               </button>
+              <button
+                type="button"
+                onClick={() =>
+                  push("memory", {
+                    payloadMB: 5,
+                    label: "Default 5MB payload",
+                  })
+                }
+              >
+                Open Memory Stress Activity
+              </button>
             </div>
           </section>
         </div>
