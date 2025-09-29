@@ -194,6 +194,9 @@ const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = 
           <section className="activity__card">
             <h2>Stack Actions</h2>
             <div className="activity__actions">
+              <button type="button" onClick={() => push("text", {})}>
+                Push text activity
+              </button>
               <button type="button" onClick={() => handlePushAnother(payloadMB)}>
                 Push another {payloadMB}MB screen
               </button>

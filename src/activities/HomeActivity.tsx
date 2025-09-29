@@ -70,6 +70,9 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
               <button type="button" onClick={() => push("chart", {})}>
                 Open Chart Activity
               </button>
+              <button type="button" onClick={() => push("text", {})}>
+                Open Text Activity
+              </button>
               <button
                 type="button"
                 onClick={() =>
