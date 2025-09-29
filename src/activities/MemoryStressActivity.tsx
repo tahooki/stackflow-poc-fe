@@ -31,7 +31,10 @@ const payloadSizeMB = (payload: HeavyPayload) => {
   return payload.buffer.byteLength / BYTES_PER_MB;
 };
 
-const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = ({ params }) => {
+const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = (
+  props: { params: MemoryStressActivityParams },
+) => {
+  const { params } = props;
   const { push, pop } = useNavActions();
   const [stackSnapshot, setStackSnapshot] = useState<HeavyPayload[]>(() => [
     ...getHeavyPayloadStack(),
