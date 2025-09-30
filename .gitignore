@@ -26,3 +26,8 @@ dist-ssr
 # Vercel CLI
 .vercel
 .npm-cache
+
+# Test results
+test-results.json
+coverage/
+*.lcov
