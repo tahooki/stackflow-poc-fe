@@ -1,0 +1,142 @@
+.placeholder-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.placeholder-container {
+  max-width: 700px;
+  width: 100%;
+  background: white;
+  border-radius: 24px;
+  padding: 3rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.placeholder-icon {
+  font-size: 5rem;
+  margin-bottom: 1.5rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.placeholder-container h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #1a202c;
+  margin-bottom: 1rem;
+}
+
+.placeholder-description {
+  font-size: 1.25rem;
+  color: #4a5568;
+  margin-bottom: 2.5rem;
+  line-height: 1.6;
+}
+
+.placeholder-features {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+  text-align: left;
+}
+
+.placeholder-feature-item {
+  padding: 1.25rem;
+  background: #f7fafc;
+  border-radius: 12px;
+  border-left: 4px solid #667eea;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.placeholder-feature-item strong {
+  font-size: 1.1rem;
+  color: #2d3748;
+}
+
+.placeholder-feature-item span {
+  font-size: 0.95rem;
+  color: #718096;
+}
+
+.placeholder-status {
+  padding: 1.5rem;
+  background: #fff5f5;
+  border: 2px dashed #feb2b2;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+}
+
+.placeholder-status p {
+  margin: 0;
+  color: #742a2a;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.placeholder-status p:not(:last-child) {
+  margin-bottom: 0.5rem;
+}
+
+.placeholder-status code {
+  background: #fed7d7;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-family: "Monaco", "Courier New", monospace;
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+.placeholder-hint {
+  opacity: 0.8;
+  font-size: 0.9rem !important;
+}
+
+.placeholder-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  text-decoration: none;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.placeholder-back-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+@media (max-width: 768px) {
+  .placeholder-container {
+    padding: 2rem;
+  }
+
+  .placeholder-container h1 {
+    font-size: 2rem;
+  }
+
+  .placeholder-description {
+    font-size: 1rem;
+  }
+}
