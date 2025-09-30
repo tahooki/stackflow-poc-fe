@@ -197,7 +197,14 @@ export const PerfHUDTestPage = () => {
             >
               HUD 위치
             </label>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+                justifyContent: "center",
+              }}
+            >
               {(
                 [
                   "top-left",
@@ -353,6 +360,7 @@ export const PerfHUDTestPage = () => {
               gap: 12,
               alignItems: "center",
               flexWrap: "wrap",
+              justifyContent: "center",
             }}
           >
             <button
@@ -447,7 +455,14 @@ export const PerfHUDTestPage = () => {
             <strong>예상 결과:</strong> HUD의 LongTasks 카운터가 증가합니다.
           </p>
 
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              flexWrap: "wrap",
+              justifyContent: "center",
+            }}
+          >
             <button
               onClick={triggerLongTask}
               style={{
