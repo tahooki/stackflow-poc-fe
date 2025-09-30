@@ -11,17 +11,16 @@ import type { RouteLike } from "@stackflow/plugin-history-sync";
 import { navFlagPlugin } from "../plugins/navFlagPlugin";
 import { devtoolsPlugin } from "@stackflow/plugin-devtools";
 
-// ActivityComponentType 제네릭이 사실상 불공변이어서 공용 레지스트리는 `any`로 둬야 한다.
-// 액티비티를 선언하는 쪽에서 params 타입은 유지되지만, 내부 저장소는 모든 형태를 받아야 한다.
-type ActivityRegistry = Record<string, ActivityComponentType<unknown>>;
-type RouteRegistry = Record<string, RouteLike<ActivityComponentType<unknown>>>;
+// ActivityComponentType 제네릭이 사실상 불공변이어서 공용 레지스트리는 폭넓은 any 기반으로 유지한다.
+// 개별 Activity는 고유 params 타입을 사용하되, 내부 저장소는 모든 형태를 수용해야 한다.
+type AnyActivityComponent = ActivityComponentType<any>;
+type ActivityRegistry = Record<string, AnyActivityComponent>;
+type RouteRegistry = Record<string, RouteLike<AnyActivityComponent>>;
 
-export type StackRouteConfig<
-  TActivity extends ActivityComponentType<unknown> = ActivityComponentType<unknown>
-> = {
+export type StackRouteConfig = {
   name?: string;
-  activity: TActivity;
-  route?: RouteLike<TActivity>;
+  activity: AnyActivityComponent;
+  route?: RouteLike<AnyActivityComponent>;
   initial?: boolean;
 };
 

@@ -15,8 +15,8 @@ type ScenarioElementText = ScenarioElementBase<
 >;
 
 type ScenarioElementNavigate<
-  ActivityParams = Record<string, unknown> | undefined,
-  PushOptions = unknown
+  ActivityParams = unknown,
+  PushOptions = { animate?: boolean } | undefined
 > = ScenarioElementBase<
   "navigate",
   {
@@ -46,8 +46,8 @@ type ScenarioElementBottomSheet = ScenarioElementBase<
 >;
 
 type ScenarioElement<
-  ActivityParams = Record<string, unknown> | undefined,
-  PushOptions = unknown
+  ActivityParams = unknown,
+  PushOptions = { animate?: boolean } | undefined
 > =
   | ScenarioElementText
   | ScenarioElementNavigate<ActivityParams, PushOptions>
@@ -55,8 +55,8 @@ type ScenarioElement<
   | ScenarioElementBottomSheet;
 
 type ScenarioActivity<
-  ActivityParams = Record<string, unknown> | undefined,
-  PushOptions = unknown
+  ActivityParams = unknown,
+  PushOptions = { animate?: boolean } | undefined
 > = {
   id: string;
   activityName: string;
@@ -66,8 +66,8 @@ type ScenarioActivity<
 };
 
 type ScenarioBlueprint<
-  ActivityParams = Record<string, unknown> | undefined,
-  PushOptions = unknown
+  ActivityParams = unknown,
+  PushOptions = { animate?: boolean } | undefined
 > = {
   id: string;
   title: string;

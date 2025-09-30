@@ -17,6 +17,11 @@ import type {
 } from "./ScenarioPanel.types";
 import type { NavFlag } from "../hooks/useNavActions";
 
+type NavFlagDraft = {
+  flag: string;
+  activity: string;
+};
+
 const componentPalette: Array<{
   type: ScenarioElement["type"];
   title: string;
@@ -138,7 +143,10 @@ const ScenarioWorkspace = ({
   const [optionsDraft, setOptionsDraft] = useState("");
   const [paramError, setParamError] = useState<string | null>(null);
   const [optionsError, setOptionsError] = useState<string | null>(null);
-  const [navFlagDraft, setNavFlagDraft] = useState({ flag: "", activity: "" });
+  const [navFlagDraft, setNavFlagDraft] = useState<NavFlagDraft>({
+    flag: "",
+    activity: "",
+  });
   const [scenarioTitle, setScenarioTitle] = useState(scenario.title);
   const [scenarioDescription, setScenarioDescription] = useState(
     scenario.description
@@ -205,12 +213,11 @@ const ScenarioWorkspace = ({
       );
       setParamError(null);
       setOptionsError(null);
+      const navFlag = selectedElement.params.navFlag;
       setNavFlagDraft({
-        flag: selectedElement.params.navFlag?.flag ?? "",
+        flag: navFlag?.flag ?? "",
         activity:
-          "activity" in (selectedElement.params.navFlag ?? {})
-            ? selectedElement.params.navFlag?.activity ?? ""
-            : "",
+          navFlag && "activity" in navFlag ? navFlag.activity ?? "" : "",
       });
       return;
     }
@@ -300,13 +307,19 @@ const ScenarioWorkspace = ({
     if (!selectedActivityId) {
       return;
     }
-    updateElement(selectedActivityId, element.id, (current) => ({
-      ...current,
-      params: {
-        ...current.params,
-        [field]: value,
-      },
-    }));
+    updateElement(selectedActivityId, element.id, (current) => {
+      if (current.type !== "text") {
+        return current;
+      }
+
+      return {
+        ...current,
+        params: {
+          ...current.params,
+          [field]: value,
+        },
+      } satisfies ScenarioElementText;
+    });
   };
 
   const handleOverlayChange = <
@@ -320,13 +333,19 @@ const ScenarioWorkspace = ({
     if (!selectedActivityId) {
       return;
     }
-    updateElement(selectedActivityId, element.id, (current) => ({
-      ...current,
-      params: {
-        ...current.params,
-        [field]: value,
-      },
-    }));
+    updateElement(selectedActivityId, element.id, (current) => {
+      if (current.type !== element.type) {
+        return current;
+      }
+
+      return {
+        ...current,
+        params: {
+          ...current.params,
+          [field]: value,
+        },
+      } as Element;
+    });
   };
 
   const handleNavigateChange = <
@@ -339,21 +358,52 @@ const ScenarioWorkspace = ({
     if (!selectedActivityId) {
       return;
     }
-    updateElement(selectedActivityId, element.id, (current) => ({
-      ...current,
-      params: {
-        ...current.params,
-        [field]: value,
-      },
-    }));
+    updateElement(selectedActivityId, element.id, (current) => {
+      if (current.type !== "navigate") {
+        return current;
+      }
+
+      return {
+        ...current,
+        params: {
+          ...current.params,
+          [field]: value,
+        },
+      } satisfies ScenarioElementNavigate;
+    });
   };
 
-  const requiresActivityFlags: NavFlag["flag"][] = [
+  type NavFlagWithActivity = Extract<NavFlag, { activity: string }>;
+  type NavFlagWithoutActivity = Exclude<NavFlag, NavFlagWithActivity>;
+
+  const allNavFlags: ReadonlyArray<NavFlag["flag"]> = [
+    "SINGLE_TOP",
     "CLEAR_TOP",
     "JUMP_TO",
+    "CLEAR_STACK",
     "CLEAR_TOP_SINGLE_TOP",
     "JUMP_TO_CLEAR_TOP",
   ];
+
+  const isValidNavFlag = (candidate: string): candidate is NavFlag["flag"] =>
+    (allNavFlags as readonly string[]).includes(candidate);
+
+  const requiresActivityFlag = (
+    flag: NavFlag["flag"]
+  ): flag is NavFlagWithActivity["flag"] =>
+    flag === "CLEAR_TOP" ||
+    flag === "JUMP_TO" ||
+    flag === "CLEAR_TOP_SINGLE_TOP" ||
+    flag === "JUMP_TO_CLEAR_TOP";
+
+  const isActivityFlag = (
+    flag: string
+  ): flag is NavFlagWithActivity["flag"] => {
+    if (!isValidNavFlag(flag)) {
+      return false;
+    }
+    return requiresActivityFlag(flag);
+  };
 
   const normalizeNavFlag = (
     flagDraft: string,
@@ -365,8 +415,12 @@ const ScenarioWorkspace = ({
     }
 
     const normalizedFlag = trimmedFlag.toUpperCase();
-    const flagValue = normalizedFlag as NavFlag["flag"];
-    if (requiresActivityFlags.includes(flagValue)) {
+    if (!isValidNavFlag(normalizedFlag)) {
+      return undefined;
+    }
+
+    const flagValue: NavFlag["flag"] = normalizedFlag;
+    if (requiresActivityFlag(flagValue)) {
       const trimmedActivity = activityDraft.trim();
       if (!trimmedActivity) {
         return undefined;
@@ -374,15 +428,17 @@ const ScenarioWorkspace = ({
       return {
         flag: flagValue,
         activity: trimmedActivity,
-      } as NavFlag;
+      } satisfies NavFlagWithActivity;
     }
 
-    return { flag: flagValue } as NavFlag;
+    return {
+      flag: flagValue,
+    } satisfies NavFlagWithoutActivity;
   };
 
   const handleNavFlagDraftChange = (
     element: ScenarioElementNavigate,
-    draft: { flag: string; activity: string }
+    draft: NavFlagDraft
   ) => {
     setNavFlagDraft(draft);
     const normalized = normalizeNavFlag(draft.flag, draft.activity);
@@ -808,9 +864,7 @@ const ScenarioWorkspace = ({
                       placeholder="activity"
                       value={navFlagDraft.activity}
                       disabled={
-                        !requiresActivityFlags.includes(
-                          navFlagDraft.flag as NavFlag["flag"]
-                        )
+                        !isActivityFlag(navFlagDraft.flag)
                       }
                       onChange={(event) =>
                         handleNavFlagDraftChange(selectedElement, {
