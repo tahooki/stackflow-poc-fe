@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "rm -rf .tmp/test-build && tsc -p tsconfig.test.json && node --experimental-specifier-resolution=node --test .tmp/test-build/tests",
     "preview": "vite preview"
   },
   "dependencies": {
