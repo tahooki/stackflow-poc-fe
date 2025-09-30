@@ -1,21 +1,23 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 
 import { stackflow } from "@stackflow/react";
 import type { ActivityComponentType } from "@stackflow/react";
+import type { StackComponentType } from "@stackflow/react";
 import { basicUIPlugin } from "@stackflow/plugin-basic-ui";
 import { basicRendererPlugin } from "@stackflow/plugin-renderer-basic";
 import { historySyncPlugin } from "@stackflow/plugin-history-sync";
 import type { RouteLike } from "@stackflow/plugin-history-sync";
 
 import { navFlagPlugin } from "../plugins/navFlagPlugin";
+import { devtoolsPlugin } from "@stackflow/plugin-devtools";
 
 // ActivityComponentType 제네릭이 사실상 불공변이어서 공용 레지스트리는 `any`로 둬야 한다.
 // 액티비티를 선언하는 쪽에서 params 타입은 유지되지만, 내부 저장소는 모든 형태를 받아야 한다.
-type ActivityRegistry = Record<string, ActivityComponentType<any>>;
-type RouteRegistry = Record<string, RouteLike<ActivityComponentType<any>>>;
+type ActivityRegistry = Record<string, ActivityComponentType<unknown>>;
+type RouteRegistry = Record<string, RouteLike<ActivityComponentType<unknown>>>;
 
 export type StackRouteConfig<
-  TActivity extends ActivityComponentType<any> = ActivityComponentType<any>
+  TActivity extends ActivityComponentType<unknown> = ActivityComponentType<unknown>
 > = {
   name?: string;
   activity: TActivity;
@@ -26,6 +28,7 @@ export type StackRouteConfig<
 type Props = {
   routes: ReadonlyArray<StackRouteConfig>;
   fallbackActivity?: string;
+  children?: (StackComponent: StackComponentType) => ReactNode;
 };
 
 let appStack: ReturnType<typeof stackflow<ActivityRegistry>> | null = null;
@@ -82,6 +85,7 @@ const ensureStackflowInstance = (
         basicUIPlugin({
           theme: "android",
         }),
+        devtoolsPlugin(),
         navFlagPlugin(),
         historySyncPlugin({
           routes: historyRoutes,
@@ -94,7 +98,7 @@ const ensureStackflowInstance = (
   return appStack;
 };
 
-export function NFXStack({ routes, fallbackActivity }: Props) {
+export function NFXStack({ routes, fallbackActivity, children }: Props) {
   const stack = useMemo(
     () => ensureStackflowInstance(routes, fallbackActivity),
     [routes, fallbackActivity]
@@ -118,9 +122,14 @@ export function NFXStack({ routes, fallbackActivity }: Props) {
     });
   }, [routes, addActivity]);
 
+  if (typeof children === "function") {
+    return <>{children(Stack)}</>;
+  }
+
   return <Stack />;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useFlow = () => {
   if (!appStack) {
     throw new Error(
@@ -129,4 +138,13 @@ export const useFlow = () => {
   }
 
   return appStack.useFlow();
+};
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const getFlowActions = () => {
+  if (!appStack) {
+    return null;
+  }
+
+  return appStack.actions;
 };

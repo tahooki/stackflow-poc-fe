@@ -1,51 +1,21 @@
-import "@stackflow/plugin-basic-ui/index.css";
-import "./App.css";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HomePage } from "./pages/HomePage";
+import { PerformancePage } from "./pages/PerformancePage";
+import { DxKitPage } from "./pages/DxKitPage";
+import { ScenarioApp } from "./pages/ScenarioApp";
 
-import ChartActivity from "./activities/ChartActivity";
-import HomeActivity from "./activities/HomeActivity";
-import MemoryStressActivity from "./activities/MemoryStressActivity";
-import TextContentActivity from "./activities/TextContentActivity";
-import TableActivity from "./activities/TableActivity";
-import { NFXStack, type StackRouteConfig } from "./lib/NFXStack";
-import { initializeWaferDataset } from "./lib/waferDataset";
-
-initializeWaferDataset();
-
-const stackRoutes: StackRouteConfig[] = [
-  {
-    name: "home",
-    activity: HomeActivity,
-    route: "/",
-    initial: true,
-  },
-  {
-    name: "table",
-    activity: TableActivity,
-    route: "/table",
-  },
-  {
-    name: "chart",
-    activity: ChartActivity,
-    route: "/chart",
-  },
-  {
-    name: "memory",
-    activity: MemoryStressActivity,
-    route: "/memory",
-  },
-  {
-    name: "text",
-    activity: TextContentActivity,
-    route: "/text",
-  },
-];
-
-function App() {
+const App = () => {
   return (
-    <div className="app">
-      <NFXStack routes={stackRoutes} />
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/scenarios/*" element={<ScenarioApp />} />
+        <Route path="/performance/*" element={<PerformancePage />} />
+        <Route path="/dx-kit" element={<DxKitPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
-}
+};
 
 export default App;
