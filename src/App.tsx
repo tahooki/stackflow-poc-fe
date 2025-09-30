@@ -10,7 +10,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/scenarios/*" element={<ScenarioApp />} />
-        <Route path="/performance" element={<PerformancePage />} />
+        <Route path="/performance/*" element={<PerformancePage />} />
         <Route path="/dx-kit" element={<DxKitPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
