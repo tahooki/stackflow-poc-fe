@@ -1,4 +1,8 @@
-// snapshot-panel.tsx
+/**
+ * StateSnapshotPanel은 라우트, 로컬 스토리지 등 브라우저 상태를 캡처해 목록으로 보여주고,
+ * 필요 시 복원 루틴을 연결할 수 있도록 안내하는 좌측 하단 패널입니다.
+ * 아직 전역 상태 스토어에 직접 접근하지는 않으므로, 복원은 사용자가 연결해야 합니다.
+ */
 import React, { useState } from "react";
 
 import { useDatasetStore } from "../../stores/datasetStore";
@@ -16,6 +20,9 @@ type SnapshotPayload = {
 
 type Snap = { id: string; at: number; route?: string; data: SnapshotPayload };
 
+/**
+ * `max` 개수만큼 최근 스냅샷을 보관하면서 브라우저 컨텍스트 정보를 캡처합니다.
+ */
 export function StateSnapshotPanel({
   max = 10,
 }: {
@@ -61,6 +68,9 @@ export function StateSnapshotPanel({
     });
   };
 
+  /**
+   * 현재 시각, 경로, 로컬 스토리지 스냅샷을 수집해 배열 앞쪽에 추가합니다.
+   */
   const capture = () => {
     const zustand: SnapshotPayload["zustand"] = {};
 
@@ -85,6 +95,10 @@ export function StateSnapshotPanel({
     setLastRestoredId(null);
   };
 
+  /**
+   * 실제 복원은 애플리케이션 상태 관리 라이브러리와 연동해야 하므로,
+   * 현재는 가이드 메시지를 보여주고 콘솔에 스냅샷을 출력합니다.
+   */
   const restore = (snap: Snap) => {
     if (snap.data.localStorage) {
       restoreLocalStorage(snap.data.localStorage);
@@ -99,6 +113,9 @@ export function StateSnapshotPanel({
     setLastRestoredId(snap.id);
   };
 
+  /**
+   * 저장된 모든 스냅샷을 삭제합니다.
+   */
   const clearAll = () => {
     setSnaps([]);
   };

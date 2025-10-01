@@ -17,6 +17,20 @@
   text-align: center;
 }
 
+.placeholder-container pre {
+  text-align: left;
+}
+
+.placeholder-container li {
+  text-align: left;
+}
+
+.placeholder-container details {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .placeholder-icon {
   font-size: 5rem;
   margin-bottom: 1.5rem;

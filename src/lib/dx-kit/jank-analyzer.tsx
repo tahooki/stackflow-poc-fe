@@ -1,7 +1,15 @@
-// jank-analyzer.tsx
+/**
+ * JankAnalyzer는 스크롤 이벤트와 requestAnimationFrame 간의 간격을 비교해
+ * 예상보다 긴 프레임 간격(=jank)이 발생한 위치를 화면에 표시합니다.
+ * 임계값(`threshold`)을 높일수록 더 큰 프레임 드랍만 잡아냅니다.
+ */
 import React, { useEffect, useRef, useState } from "react";
 
 type Hit = { at: number; y: number };
+
+/**
+ * 스크롤 시점 간의 시간 차이가 16.7ms 기준에서 threshold 배수를 초과하면 히트를 기록합니다.
+ */
 export function JankAnalyzer({ threshold = 0.2 }: { threshold?: number }) {
   const [hits, setHits] = useState<Hit[]>([]);
   const last = useRef({ t: performance.now(), y: window.scrollY });
