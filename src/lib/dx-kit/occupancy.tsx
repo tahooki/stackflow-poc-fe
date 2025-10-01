@@ -1,4 +1,8 @@
-// occupancy.tsx
+/**
+ * OccupancyHUD는 React Profiler, 이벤트 핸들러, 이펙트 실행 시간을 합산해
+ * 컴포넌트별 메인 스레드 점유 시간을 추적하는 도구입니다.
+ * render/commit/event/effect 구간을 분리해 누적 시간을 기록하고 상위 항목을 표시합니다.
+ */
 import React, { Profiler, useCallback, useEffect, useState } from "react";
 
 const store = new Map<
@@ -15,6 +19,9 @@ function getZero() {
   return { render: 0, commit: 0, event: 0, effect: 0, ts: performance.now() };
 }
 
+/**
+ * React Profiler HOC로 감싼 컴포넌트의 render/commit 시간을 자동으로 누적 기록합니다.
+ */
 export function withRenderProfiler<P extends object>(
   Comp: React.ComponentType<P>,
   label?: string
@@ -33,6 +40,9 @@ export function withRenderProfiler<P extends object>(
   );
 }
 
+/**
+ * 이벤트 핸들러 실행 시간을 측정해 Occupancy 스토어에 `event` 시간으로 기록합니다.
+ */
 export function useInstrumentedHandler<T extends (...a: any[]) => any>(
   label: string,
   fn: T
@@ -50,6 +60,9 @@ export function useInstrumentedHandler<T extends (...a: any[]) => any>(
   ) as T;
 }
 
+/**
+ * Effect와 cleanup 구간의 실행 시간을 측정해 Occupancy 스토어에 `effect`로 더합니다.
+ */
 export function useTimedEffect(
   label: string,
   cb: React.EffectCallback,
@@ -72,6 +85,9 @@ export function useTimedEffect(
   }, deps);
 }
 
+/**
+ * 1초 주기로 스토어 스냅샷을 취해 상위 8개 항목을 HUD로 렌더링합니다.
+ */
 export function OccupancyHUD() {
   const [rows, setRows] = useState<any[]>([]);
   useEffect(() => {
