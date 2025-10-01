@@ -5,13 +5,16 @@ const bus = { lastRenders: new WeakMap<object, number>() };
 
 export function useRenderCounter(label?: string) {
   const token = useRef({});
-  const [count, setCount] = useState(0);
+  const renderCount = useRef(0);
+
+  renderCount.current += 1;
+
   useEffect(() => {
     const now = performance.now();
     bus.lastRenders.set(token.current, now);
-    setCount((c) => c + 1);
   });
-  return { count, label };
+
+  return { count: renderCount.current, label };
 }
 
 export function RerenderBadge({
@@ -47,6 +50,8 @@ export function RerenderHeatmap({
   enabledShortcut?: boolean;
 }) {
   const [on, setOn] = useState(false);
+  const cssText =
+    "*[data-rerender=\"1\"]{outline:2px solid rgba(59,130,246,.9)!important;outline-offset:2px;border-radius:6px}";
   useEffect(() => {
     if (!enabledShortcut) return;
     const onKey = (e: KeyboardEvent) => {
@@ -62,19 +67,36 @@ export function RerenderHeatmap({
 
   useEffect(() => {
     if (!on) return;
-    const sheets = new CSSStyleSheet();
-    sheets.replaceSync(
-      `*[data-rerender="1"]{outline:2px solid rgba(59,130,246,.9)!important;outline-offset:2px;border-radius:6px}`
+    const supportAdoptedSheets = Array.isArray(
+      // @ts-expect-error adoptedStyleSheets is not in lib.dom yet
+      document.adoptedStyleSheets
     );
-    // @ts-ignore
-    document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheets];
+
+    if (supportAdoptedSheets) {
+      const sheets = new CSSStyleSheet();
+      sheets.replaceSync(cssText);
+      // @ts-expect-error adoptedStyleSheets is still readonly in the DOM lib typings
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheets];
+      const id = setTimeout(() => {
+        // @ts-expect-error adoptedStyleSheets is still readonly in the DOM lib typings
+        document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+          (s: CSSStyleSheet) => s !== sheets
+        );
+      }, 1500);
+      return () => clearTimeout(id);
+    }
+
+    const style = document.createElement("style");
+    style.setAttribute("data-rerender-heatmap", "1");
+    style.textContent = cssText;
+    document.head.appendChild(style);
     const id = setTimeout(() => {
-      // @ts-ignore
-      document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
-        (s: any) => s !== sheets
-      );
+      style.remove();
     }, 1500);
-    return () => clearTimeout(id);
+    return () => {
+      clearTimeout(id);
+      style.remove();
+    };
   }, [on]);
 
   return null;
