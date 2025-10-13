@@ -16,6 +16,8 @@ import {
 const BYTES_PER_MB = 1024 * 1024;
 const DEFAULT_PAYLOAD_MB = 5;
 const DEFAULT_EXTRA_MB = 10;
+const EXACT_ALLOC_MB = 10;
+const EXACT_ALLOC_BYTES = EXACT_ALLOC_MB * BYTES_PER_MB;
 
 export type MemoryStressActivityParams = {
   payloadMB?: number;
@@ -45,6 +47,7 @@ const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = 
   const [heapMB, setHeapMB] = useState<number | null>(null);
   const payloadRef = useRef<HeavyPayload | null>(null);
   const mountedRef = useRef(true);
+  const [preciseBuffers, setPreciseBuffers] = useState<ArrayBuffer[]>([]);
 
   useEffect(() => () => {
     mountedRef.current = false;
@@ -108,6 +111,7 @@ const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = 
     () => localPayloads.reduce((acc, item) => acc + payloadSizeMB(item), 0),
     [localPayloads],
   );
+  const preciseBufferMB = preciseBuffers.length * EXACT_ALLOC_MB;
 
   const handlePushAnother = useCallback(
     (size: number) => {
@@ -158,6 +162,12 @@ const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = 
   const handleClearLocal = useCallback(() => {
     setLocalPayloads([]);
   }, []);
+  const handleAllocPrecise10MB = useCallback(() => {
+    setPreciseBuffers((prev) => [...prev, new ArrayBuffer(EXACT_ALLOC_BYTES)]);
+  }, []);
+  const handleFreePreciseBuffers = useCallback(() => {
+    setPreciseBuffers([]);
+  }, []);
 
   const heapLabel = heapMB === null ? "N/A" : `${heapMB.toFixed(1)} MB`;
   const title = params.label ?? "Memory Stress";
@@ -190,6 +200,7 @@ const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = 
               <li>Stack depth: {stackDepth}</li>
               <li>Total stack payload: {stackSizeMB.toFixed(2)} MB</li>
               <li>Local extras (this screen): {localSizeMB.toFixed(2)} MB</li>
+              <li>Exact 10MB buffers: {preciseBufferMB.toFixed(2)} MB</li>
               <li>Heap usage (browser reported): {heapLabel}</li>
             </ul>
           </section>
@@ -239,6 +250,24 @@ const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = 
               </button>
               <button type="button" disabled={localPayloads.length === 0} onClick={handleClearLocal}>
                 Release local payloads
+              </button>
+            </div>
+          </section>
+          <section className="activity__card">
+            <h2>Exact Byte Buffers</h2>
+            <p>
+              Use raw {EXACT_ALLOC_MB}MB ArrayBuffers to validate the HUD with precise byte increments.
+            </p>
+            <div className="activity__actions">
+              <button type="button" onClick={handleAllocPrecise10MB}>
+                Allocate +{EXACT_ALLOC_MB}MB buffer
+              </button>
+              <button
+                type="button"
+                disabled={preciseBuffers.length === 0}
+                onClick={handleFreePreciseBuffers}
+              >
+                Release {preciseBuffers.length} buffer{preciseBuffers.length === 1 ? "" : "s"}
               </button>
             </div>
           </section>

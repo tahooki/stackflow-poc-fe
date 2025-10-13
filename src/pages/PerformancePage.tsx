@@ -5,6 +5,7 @@ import MemoryStressActivity from "../activities/MemoryStressActivity";
 import TextContentActivity from "../activities/TextContentActivity";
 import TableActivity from "../activities/TableActivity";
 import { NFXStack, type StackRouteConfig } from "../lib/NFXStack";
+import { PerfHUD } from "../lib/dx-kit";
 import { initializeWaferDataset } from "../lib/waferDataset";
 
 const stackRoutes: StackRouteConfig[] = [
@@ -41,5 +42,10 @@ export const PerformancePage = () => {
     initializeWaferDataset();
   }, []);
 
-  return <NFXStack routes={stackRoutes} />;
+  return (
+    <>
+      <PerfHUD position="top-right" />
+      <NFXStack routes={stackRoutes} />
+    </>
+  );
 };
