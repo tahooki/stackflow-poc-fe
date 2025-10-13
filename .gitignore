@@ -31,3 +31,8 @@ dist-ssr
 test-results.json
 coverage/
 *.lcov
+
+# Android
+android/app/build
+android/app/build.gradle.kts
+android/.gradle
