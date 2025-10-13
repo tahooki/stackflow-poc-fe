@@ -3,7 +3,7 @@ import "ag-grid-community/styles/ag-theme-quartz.css";
 
 import { AppScreen } from "@stackflow/plugin-basic-ui";
 import type { ActivityComponentType } from "@stackflow/react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import type { ColDef } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 
@@ -12,6 +12,7 @@ import { createWaferDatasetCopy } from "../lib/waferDataset";
 import { useDatasetStore } from "../stores/datasetStore";
 import type { DatasetState } from "../stores/datasetStore";
 import { ensureAgGridModules } from "../lib/agGridModules";
+import { useFlow } from "../lib/NFXStack";
 
 export type TableActivityParams = Record<string, never>;
 
@@ -30,6 +31,16 @@ ensureAgGridModules();
 const TableActivity: ActivityComponentType<TableActivityParams> = () => {
   const { push } = useNavActions();
   const recordCount = useDatasetStore((state: DatasetState) => state.recordCount);
+  const flow = useFlow();
+  const activities = flow.stack?.activities ?? [];
+  const tableStackCount = useMemo(
+    () =>
+      activities.reduce(
+        (count, activity) => (activity.name === "table" ? count + 1 : count),
+        0,
+      ),
+    [activities],
+  );
   const dataset = useMemo(() => createWaferDatasetCopy(recordCount), [recordCount]);
 
   const rowData = useMemo<WaferSummaryRow[]>(
@@ -85,22 +96,47 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
     () => ({ resizable: true, filter: true }),
     []
   );
+  const pushTable = useCallback(() => {
+    push("table", {});
+  }, [push]);
+
+  const pushTables = useCallback(
+    (times: number) => {
+      for (let iteration = 0; iteration < times; iteration += 1) {
+        push("table", {});
+      }
+    },
+    [push],
+  );
 
   return (
-    <AppScreen
-      appBar={{
-        title: "Table Activity",
-        renderRight: () => (
-          <button type="button" className="app-bar__action" onClick={() => push("table", {})}>
-            페이지 추가
-          </button>
-        ),
-      }}
-    >
+    <AppScreen appBar={{ title: "Table Activity" }}>
       <div className="activity">
         <section className="activity__header">
           <h1>Wafer Dataset Table</h1>
           <p>{rowData.length.toLocaleString()} records loaded into this activity.</p>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 12,
+              alignItems: "center",
+              marginTop: 16,
+            }}
+          >
+            <button type="button" onClick={pushTable}>
+              페이지 추가
+            </button>
+            <button type="button" onClick={() => pushTables(5)}>
+              5개 쌓기
+            </button>
+            <button type="button" onClick={() => pushTables(10)}>
+              10개 쌓기
+            </button>
+            <span style={{ fontWeight: 600 }}>
+              현재 Table 스택: {tableStackCount.toLocaleString()}
+            </span>
+          </div>
         </section>
 
         <div className="activity__content">

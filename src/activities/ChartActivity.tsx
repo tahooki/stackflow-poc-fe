@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import Chart from "chart.js/auto";
 import { AppScreen } from "@stackflow/plugin-basic-ui";
 import type { ActivityComponentType } from "@stackflow/react";
@@ -7,6 +7,7 @@ import { useNavActions } from "../hooks/useNavActions";
 import { createWaferDatasetCopy } from "../lib/waferDataset";
 import { useDatasetStore } from "../stores/datasetStore";
 import type { DatasetState } from "../stores/datasetStore";
+import { useFlow } from "../lib/NFXStack";
 
 export type ChartActivityParams = Record<string, never>;
 
@@ -44,6 +45,16 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
   const { push } = useNavActions();
   const recordCount = useDatasetStore((state: DatasetState) => state.recordCount);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const flow = useFlow();
+  const activities = flow.stack?.activities ?? [];
+  const chartStackCount = useMemo(
+    () =>
+      activities.reduce(
+        (count, activity) => (activity.name === "chart" ? count + 1 : count),
+        0,
+      ),
+    [activities],
+  );
 
   const { timeline, sampleStep, sourceLength } = useMemo<{
     timeline: TimelinePoint[];
@@ -128,17 +139,21 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
     };
   }, [timeline]);
 
+  const pushChart = useCallback(() => {
+    push("chart", {});
+  }, [push]);
+
+  const pushCharts = useCallback(
+    (times: number) => {
+      for (let iteration = 0; iteration < times; iteration += 1) {
+        push("chart", {});
+      }
+    },
+    [push],
+  );
+
   return (
-    <AppScreen
-      appBar={{
-        title: "Chart Activity",
-        renderRight: () => (
-          <button type="button" className="app-bar__action" onClick={() => push("chart", {})}>
-            페이지 추가
-          </button>
-        ),
-      }}
-    >
+    <AppScreen appBar={{ title: "Chart Activity" }}>
       <div className="activity">
         <section className="activity__header">
           <h1>Yield Trend</h1>
@@ -146,6 +161,28 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
             {sourceLength.toLocaleString()} records selected · rendering {timeline.length.toLocaleString()} points
             {sampleStep > 1 ? ` (sampled every ${sampleStep} points).` : "."}
           </p>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 12,
+              alignItems: "center",
+              marginTop: 16,
+            }}
+          >
+            <button type="button" onClick={pushChart}>
+              페이지 추가
+            </button>
+            <button type="button" onClick={() => pushCharts(5)}>
+              5개 쌓기
+            </button>
+            <button type="button" onClick={() => pushCharts(10)}>
+              10개 쌓기
+            </button>
+            <span style={{ fontWeight: 600 }}>
+              현재 Chart 스택: {chartStackCount.toLocaleString()}
+            </span>
+          </div>
         </section>
 
         <div className="activity__content">

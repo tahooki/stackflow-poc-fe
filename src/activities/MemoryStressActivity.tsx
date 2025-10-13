@@ -16,8 +16,6 @@ import {
 const BYTES_PER_MB = 1024 * 1024;
 const DEFAULT_PAYLOAD_MB = 5;
 const DEFAULT_EXTRA_MB = 10;
-const EXACT_ALLOC_MB = 10;
-const EXACT_ALLOC_BYTES = EXACT_ALLOC_MB * BYTES_PER_MB;
 
 export type MemoryStressActivityParams = {
   payloadMB?: number;
@@ -33,9 +31,9 @@ const payloadSizeMB = (payload: HeavyPayload) => {
   return payload.buffer.byteLength / BYTES_PER_MB;
 };
 
-const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = (
-  props: { params: MemoryStressActivityParams },
-) => {
+const MemoryStressActivity: ActivityComponentType<
+  MemoryStressActivityParams
+> = (props: { params: MemoryStressActivityParams }) => {
   const { params } = props;
   const { push, pop } = useNavActions();
   const [stackSnapshot, setStackSnapshot] = useState<HeavyPayload[]>(() => [
@@ -47,11 +45,13 @@ const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = 
   const [heapMB, setHeapMB] = useState<number | null>(null);
   const payloadRef = useRef<HeavyPayload | null>(null);
   const mountedRef = useRef(true);
-  const [preciseBuffers, setPreciseBuffers] = useState<ArrayBuffer[]>([]);
 
-  useEffect(() => () => {
-    mountedRef.current = false;
-  }, []);
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    []
+  );
 
   const payloadMB = params.payloadMB ?? DEFAULT_PAYLOAD_MB;
   const allocationLabel = params.label ?? `${payloadMB}MB payload`;
@@ -97,21 +97,19 @@ const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = 
       mode,
       chunkKB,
     }),
-    [payloadMB, allocationLabel, mode, chunkKB],
+    [payloadMB, allocationLabel, mode, chunkKB]
   );
 
   const stackDepth = stackSnapshot.length;
   const stackSizeMB = useMemo(
-    () =>
-      stackSnapshot.reduce((acc, item) => acc + payloadSizeMB(item), 0),
-    [stackSnapshot],
+    () => stackSnapshot.reduce((acc, item) => acc + payloadSizeMB(item), 0),
+    [stackSnapshot]
   );
 
   const localSizeMB = useMemo(
     () => localPayloads.reduce((acc, item) => acc + payloadSizeMB(item), 0),
-    [localPayloads],
+    [localPayloads]
   );
-  const preciseBufferMB = preciseBuffers.length * EXACT_ALLOC_MB;
 
   const handlePushAnother = useCallback(
     (size: number) => {
@@ -121,7 +119,7 @@ const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = 
         label: `${size}MB payload`,
       });
     },
-    [baseParams, push],
+    [baseParams, push]
   );
 
   const handleAllocateExtra = useCallback(
@@ -156,30 +154,31 @@ const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = 
         }
       }
     },
-    [chunkKB, mode, status],
+    [chunkKB, mode, status]
   );
 
   const handleClearLocal = useCallback(() => {
     setLocalPayloads([]);
   }, []);
-  const handleAllocPrecise10MB = useCallback(() => {
-    setPreciseBuffers((prev) => [...prev, new ArrayBuffer(EXACT_ALLOC_BYTES)]);
-  }, []);
-  const handleFreePreciseBuffers = useCallback(() => {
-    setPreciseBuffers([]);
-  }, []);
 
   const heapLabel = heapMB === null ? "N/A" : `${heapMB.toFixed(1)} MB`;
   const title = params.label ?? "Memory Stress";
-  const resolvedPayload = payloadRef.current ?? stackSnapshot[stackDepth - 1] ?? null;
-  const ownPayloadLabel = resolvedPayload ? payloadSizeMB(resolvedPayload).toFixed(2) : "0.00";
+  const resolvedPayload =
+    payloadRef.current ?? stackSnapshot[stackDepth - 1] ?? null;
+  const ownPayloadLabel = resolvedPayload
+    ? payloadSizeMB(resolvedPayload).toFixed(2)
+    : "0.00";
 
   return (
     <AppScreen
       appBar={{
         title,
         renderRight: () => (
-          <button type="button" className="app-bar__action" onClick={() => push("memory", baseParams)}>
+          <button
+            type="button"
+            className="app-bar__action"
+            onClick={() => push("memory", baseParams)}
+          >
             복제
           </button>
         ),
@@ -189,7 +188,8 @@ const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = 
         <section className="activity__header">
           <h1>{allocationLabel}</h1>
           <p>
-            This screen holds approximately {ownPayloadLabel} MB from its own payload.
+            This screen holds approximately {ownPayloadLabel} MB from its own
+            payload.
           </p>
         </section>
 
@@ -200,7 +200,6 @@ const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = 
               <li>Stack depth: {stackDepth}</li>
               <li>Total stack payload: {stackSizeMB.toFixed(2)} MB</li>
               <li>Local extras (this screen): {localSizeMB.toFixed(2)} MB</li>
-              <li>Exact 10MB buffers: {preciseBufferMB.toFixed(2)} MB</li>
               <li>Heap usage (browser reported): {heapLabel}</li>
             </ul>
           </section>
@@ -211,13 +210,22 @@ const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = 
               <button type="button" onClick={() => push("text", {})}>
                 Push text activity
               </button>
-              <button type="button" onClick={() => handlePushAnother(payloadMB)}>
+              <button
+                type="button"
+                onClick={() => handlePushAnother(payloadMB)}
+              >
                 Push another {payloadMB}MB screen
               </button>
-              <button type="button" onClick={() => handlePushAnother(payloadMB * 2)}>
+              <button
+                type="button"
+                onClick={() => handlePushAnother(payloadMB * 2)}
+              >
                 Push heavier {payloadMB * 2}MB screen
               </button>
-              <button type="button" onClick={() => handlePushAnother(DEFAULT_EXTRA_MB)}>
+              <button
+                type="button"
+                onClick={() => handlePushAnother(DEFAULT_EXTRA_MB)}
+              >
                 Push {DEFAULT_EXTRA_MB}MB preset
               </button>
               <button type="button" onClick={() => pop()}>
@@ -229,7 +237,8 @@ const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = 
           <section className="activity__card">
             <h2>In-Screen Allocations</h2>
             <p>
-              Allocate additional payloads retained by this screen to observe incremental heap growth without new screens.
+              Allocate additional payloads retained by this screen to observe
+              incremental heap growth without new screens.
             </p>
             <div className="activity__actions">
               <button
@@ -248,26 +257,12 @@ const MemoryStressActivity: ActivityComponentType<MemoryStressActivityParams> = 
               >
                 {status === "allocating" ? "Busy" : `Allocate +${payloadMB}MB`}
               </button>
-              <button type="button" disabled={localPayloads.length === 0} onClick={handleClearLocal}>
-                Release local payloads
-              </button>
-            </div>
-          </section>
-          <section className="activity__card">
-            <h2>Exact Byte Buffers</h2>
-            <p>
-              Use raw {EXACT_ALLOC_MB}MB ArrayBuffers to validate the HUD with precise byte increments.
-            </p>
-            <div className="activity__actions">
-              <button type="button" onClick={handleAllocPrecise10MB}>
-                Allocate +{EXACT_ALLOC_MB}MB buffer
-              </button>
               <button
                 type="button"
-                disabled={preciseBuffers.length === 0}
-                onClick={handleFreePreciseBuffers}
+                disabled={localPayloads.length === 0}
+                onClick={handleClearLocal}
               >
-                Release {preciseBuffers.length} buffer{preciseBuffers.length === 1 ? "" : "s"}
+                Release local payloads
               </button>
             </div>
           </section>

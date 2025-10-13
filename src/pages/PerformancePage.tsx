@@ -44,7 +44,7 @@ export const PerformancePage = () => {
 
   return (
     <>
-      <PerfHUD position="top-right" />
+      <PerfHUD position="bottom-right" />
       <NFXStack routes={stackRoutes} />
     </>
   );
