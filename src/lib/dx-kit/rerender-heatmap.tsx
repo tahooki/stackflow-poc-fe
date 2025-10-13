@@ -1,12 +1,17 @@
 /**
  * RerenderHeatmap은 컴포넌트가 다시 렌더링될 때 일시적으로 외곽선을 강조하고,
  * 렌더 횟수를 배지로 표시하여 리렌더 지점을 눈으로 추적할 수 있게 해줍니다.
- * WeakMap을 이용해 각 컴포넌트 인스턴스를 추적하고, 단축키(Cmd/Ctrl+Shift+R)로
- * 시각화 토글을 활성화하도록 설계되어 있습니다.
+ * 2024-xx-xx 개편: 렌더 타이밍에 따라 자동으로 하이라이트되며, 단축키(Cmd/Ctrl+Shift+R)
+ * 를 누르면 전역 플래시로 모든 추적 대상을 한 번에 확인할 수도 있습니다.
  */
-import React, { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
-const bus = { lastRenders: new WeakMap<object, number>() };
+type Listener = () => void;
+const bus = {
+  lastRenders: new WeakMap<object, number>(),
+  listeners: new Set<Listener>(),
+};
 
 /**
  * 훅이 호출될 때마다 렌더 타임스탬프를 갱신하고 누적 렌더 횟수를 반환합니다.
@@ -24,6 +29,44 @@ export function useRenderCounter(label?: string) {
   });
 
   return { count: renderCount.current, label };
+}
+
+export function useRerenderFlash(flashDuration = 1200) {
+  const [active, setActive] = useState(false);
+  const timerRef = useRef<number | null>(null);
+
+  const triggerFlash = useCallback(() => {
+    setActive(true);
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+    }
+    timerRef.current = window.setTimeout(() => {
+      setActive(false);
+      timerRef.current = null;
+    }, flashDuration);
+  }, [flashDuration]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    bus.listeners.add(triggerFlash);
+    return () => {
+      bus.listeners.delete(triggerFlash);
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [triggerFlash]);
+
+  return { active, triggerFlash };
 }
 
 /**
@@ -65,55 +108,46 @@ export function RerenderHeatmap({
 }: {
   enabledShortcut?: boolean;
 }) {
-  const [on, setOn] = useState(false);
   const cssText =
     "*[data-rerender=\"1\"]{outline:2px solid rgba(59,130,246,.9)!important;outline-offset:2px;border-radius:6px}";
-  useEffect(() => {
-    if (!enabledShortcut) return;
-    const onKey = (e: KeyboardEvent) => {
-      const mod = (e.ctrlKey || e.metaKey) && e.shiftKey && e.code === "KeyR";
-      if (mod) {
-        setOn(true);
-        setTimeout(() => setOn(false), 1500);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [enabledShortcut]);
 
+  // 기본 스타일은 항상 주입해 두어 auto flash가 바로 동작하도록 한다.
   useEffect(() => {
-    if (!on) return;
-    const supportAdoptedSheets = Array.isArray(
-      // @ts-expect-error adoptedStyleSheets is not in lib.dom yet
-      document.adoptedStyleSheets
-    );
+    const doc = document as any;
+    const supportAdoptedSheets = Array.isArray(doc.adoptedStyleSheets);
 
     if (supportAdoptedSheets) {
-      const sheets = new CSSStyleSheet();
-      sheets.replaceSync(cssText);
-      // @ts-expect-error adoptedStyleSheets is still readonly in the DOM lib typings
-      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheets];
-      const id = setTimeout(() => {
-        // @ts-expect-error adoptedStyleSheets is still readonly in the DOM lib typings
-        document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
-          (s: CSSStyleSheet) => s !== sheets
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(cssText);
+      doc.adoptedStyleSheets = [...doc.adoptedStyleSheets, sheet];
+      return () => {
+        doc.adoptedStyleSheets = doc.adoptedStyleSheets.filter(
+          (s: CSSStyleSheet) => s !== sheet
         );
-      }, 1500);
-      return () => clearTimeout(id);
+      };
     }
 
     const style = document.createElement("style");
     style.setAttribute("data-rerender-heatmap", "1");
     style.textContent = cssText;
     document.head.appendChild(style);
-    const id = setTimeout(() => {
-      style.remove();
-    }, 1500);
     return () => {
-      clearTimeout(id);
       style.remove();
     };
-  }, [on]);
+  }, [cssText]);
+
+  // 단축키를 누르면 모든 추적 대상이 동시에 점멸하도록 신호를 보낸다.
+  useEffect(() => {
+    if (!enabledShortcut) return;
+    const onKey = (e: KeyboardEvent) => {
+      const mod = (e.ctrlKey || e.metaKey) && e.shiftKey && e.code === "KeyR";
+      if (mod) {
+        bus.listeners.forEach((listener) => listener());
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [enabledShortcut]);
 
   return null;
 }
@@ -125,13 +159,35 @@ export function RerenderHeatmap({
 export function Box({
   label,
   children,
+  style,
+  flashDuration = 1200,
+  highlightOnMount = false,
 }: {
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
+  style?: CSSProperties;
+  flashDuration?: number;
+  highlightOnMount?: boolean;
 }) {
   const { count } = useRenderCounter(label);
+  const { active, triggerFlash } = useRerenderFlash(flashDuration);
+
+  useEffect(() => {
+    if (count === 1) {
+      if (highlightOnMount) {
+        triggerFlash();
+      }
+      return;
+    }
+    triggerFlash();
+  }, [count, highlightOnMount, triggerFlash]);
+
   return (
-    <div data-rerender={1} style={{ position: "relative" }}>
+    <div
+      data-rerender={active ? "1" : undefined}
+      style={{ position: "relative", ...style }}
+      data-rerender-count={count}
+    >
       <RerenderBadge label={label} count={count} />
       {children}
     </div>

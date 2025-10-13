@@ -2,7 +2,7 @@
  * LeakHUD/LeakWatch는 WeakRef와 FinalizationRegistry를 활용해 컴포넌트 언마운트 이후
  * 가비지 컬렉션이 지연되는 대상을 추적하고, 잠재적인 메모리 누수 의심 목록을 보여줍니다.
  */
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 class LeakTracker {
   registry?: FinalizationRegistry<string>;
@@ -43,7 +43,7 @@ class LeakTracker {
   snapshot(graceMs = 15000) {
     const now = performance.now();
     const by: Record<string, { alive: number; suspected: number }> = {};
-    for (const [id, it] of this.items) {
+    for (const it of this.items.values()) {
       const key = it.label;
       by[key] ??= { alive: 0, suspected: 0 };
       by[key].alive++;

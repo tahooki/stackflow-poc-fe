@@ -3,7 +3,8 @@
  * 컴포넌트별 메인 스레드 점유 시간을 추적하는 도구입니다.
  * render/commit/event/effect 구간을 분리해 누적 시간을 기록하고 상위 항목을 표시합니다.
  */
-import React, { Profiler, useCallback, useEffect, useState } from "react";
+import { Profiler, useCallback, useEffect, useState } from "react";
+import type { ComponentType, EffectCallback } from "react";
 
 const store = new Map<
   string,
@@ -23,14 +24,16 @@ function getZero() {
  * React Profiler HOC로 감싼 컴포넌트의 render/commit 시간을 자동으로 누적 기록합니다.
  */
 export function withRenderProfiler<P extends object>(
-  Comp: React.ComponentType<P>,
+  Comp: ComponentType<P>,
   label?: string
 ) {
   const name = label ?? Comp.displayName ?? Comp.name ?? "Component";
   return (props: P) => (
     <Profiler
       id={name}
-      onRender={(id, phase, actualDuration, baseDuration, start, commit) => {
+      onRender={(id, _phase, actualDuration, _baseDuration, start, commit) => {
+        void _phase;
+        void _baseDuration;
         add(id, "render", actualDuration);
         add(id, "commit", Math.max(0, commit - start - actualDuration));
       }}
@@ -63,11 +66,7 @@ export function useInstrumentedHandler<T extends (...a: any[]) => any>(
 /**
  * Effect와 cleanup 구간의 실행 시간을 측정해 Occupancy 스토어에 `effect`로 더합니다.
  */
-export function useTimedEffect(
-  label: string,
-  cb: React.EffectCallback,
-  deps: any[]
-) {
+export function useTimedEffect(label: string, cb: EffectCallback, deps: any[]) {
   useEffect(() => {
     const t0 = performance.now();
     let clean: any;

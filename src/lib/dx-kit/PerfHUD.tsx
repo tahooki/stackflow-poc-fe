@@ -4,7 +4,7 @@
  * 모바일(특히 Note20)을 타깃으로 했기 때문에 측정 주기와 경고 임계값이 공격적으로
  * 설정되어 있으며, `danger` 옵션으로 상황에 맞는 경고 임계값을 조정할 수 있습니다.
  */
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * rAF 기반으로 지정한 샘플링 윈도우 동안 발생한 프레임 수를 측정해 FPS를 추정합니다.

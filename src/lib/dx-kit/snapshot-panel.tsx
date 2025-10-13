@@ -3,7 +3,7 @@
  * 필요 시 복원 루틴을 연결할 수 있도록 안내하는 좌측 하단 패널입니다.
  * 아직 전역 상태 스토어에 직접 접근하지는 않으므로, 복원은 사용자가 연결해야 합니다.
  */
-import React, { useState } from "react";
+import { useState } from "react";
 
 import { useDatasetStore } from "../../stores/datasetStore";
 

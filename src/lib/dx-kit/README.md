@@ -15,17 +15,30 @@
 ```
 
 ### 2. RerenderHeatmap - 리렌더 시각화
-- **단축키**: Cmd/Ctrl + Shift + R
-- **기능**: 리렌더된 컴포넌트를 1-2초간 파란 외곽선으로 표시
+- **자동 플래시**: 리렌더 직후 1.2초간 파란 외곽선을 자동 표시
+- **단축키**: Cmd/Ctrl + Shift + R로 전체 추적 대상을 동시에 플래시
 - **배지**: 컴포넌트별 렌더 횟수 표시
+- **Box 옵션**: `highlightOnMount`로 초기 렌더 하이라이트 여부 제어
+- **커스터마이징**: `useRerenderFlash()`로 Box 없이도 직접 플래시 상태 제어
 
 ```tsx
-<RerenderHeatmap enabledShortcut />
+<RerenderHeatmap />
 
-// 컴포넌트에서 사용
+// 가장 간단한 사용법
 <Box label="MyComponent">
   {/* content */}
 </Box>
+
+// Box를 쓰기 어려운 경우
+const { active, triggerFlash } = useRerenderFlash(800);
+useEffect(() => {
+  triggerFlash(); // rerender 시점에서 호출
+}, [someSignal, triggerFlash]);
+return (
+  <div data-rerender={active ? "1" : undefined}>
+    {/* content */}
+  </div>
+);
 ```
 
 ### 3. StateSnapshotPanel - 상태 스냅샷
@@ -101,7 +114,7 @@ function App() {
       {process.env.NODE_ENV !== "production" && (
         <>
           <PerfHUD position="top-right" danger={{ fps: 45, heapMB: 300 }} />
-          <RerenderHeatmap enabledShortcut />
+          <RerenderHeatmap />
           <StateSnapshotPanel max={10} />
           <LeakHUD />
           <OccupancyHUD />

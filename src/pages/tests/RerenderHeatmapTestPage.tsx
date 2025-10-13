@@ -1,11 +1,6 @@
 import { useState, useCallback, useMemo, memo } from "react";
 import { Link } from "react-router-dom";
-import {
-  RerenderHeatmap,
-  Box,
-  useRenderCounter,
-  RerenderBadge,
-} from "../../lib/dx-kit";
+import { RerenderHeatmap, Box, useRenderCounter } from "../../lib/dx-kit";
 import "../PlaceholderPage.css";
 
 /**
@@ -17,9 +12,13 @@ import "../PlaceholderPage.css";
  *
  * ### 핵심 기능
  *
- * #### 1. 키보드 단축키 활성화
+ * #### 1. 자동 리렌더 플래시
+ * - 추적 대상 컴포넌트는 리렌더 직후 1.2초 동안 파란색 외곽선이 자동 표시됩니다
+ * - 렌더 횟수 배지와 함께 즉시 변화를 확인할 수 있습니다
+ *
+ * #### 2. 키보드 단축키 플래시
  * - **단축키**: `Cmd/Ctrl + Shift + R`
- * - 단축키를 누르면 1.5초 동안 리렌더링된 컴포넌트에 파란색 외곽선이 표시됩니다
+ * - 단축키를 누르면 모든 추적 대상이 동시에 플래시되어 전체 렌더 지형을 빠르게 조망합니다
  * - 별도의 UI 없이 작동하는 비침투적 도구입니다
  *
  * #### 2. 렌더 카운터
@@ -27,8 +26,8 @@ import "../PlaceholderPage.css";
  * - 매 렌더마다 카운트가 증가하며, 성능 병목을 찾는 데 도움이 됩니다
  *
  * #### 3. Box 래퍼 컴포넌트
- * - 자동으로 리렌더 카운트 배지를 표시하는 편리한 래퍼입니다
- * - `data-rerender` 속성이 자동으로 추가되어 하이라이트 대상이 됩니다
+ * - 자동으로 리렌더 카운트 배지를 표시하고 하이라이트까지 처리하는 래퍼입니다
+ * - 별도 속성 없이 자식 요소 전체를 추적 대상으로 만듭니다
  *
  * ## Props
  *
@@ -43,6 +42,12 @@ import "../PlaceholderPage.css";
  *   label: string | undefined;
  * }
  *
+ * // useRerenderFlash
+ * function useRerenderFlash(flashDuration?: number): {
+ *   active: boolean;             // 현재 하이라이트 활성 여부
+ *   triggerFlash: () => void;    // 수동으로 플래시를 재실행
+ * }
+ *
  * // Box 컴포넌트
  * interface BoxProps {
  *   label: string;              // 컴포넌트 라벨 (배지에 표시됨)
@@ -54,7 +59,7 @@ import "../PlaceholderPage.css";
  *
  * ### 시나리오 1: 기본 리렌더 감지
  * - 단순한 state 변경으로 컴포넌트를 리렌더링합니다
- * - Cmd/Ctrl + Shift + R을 눌러 하이라이트를 확인합니다
+ * - 리렌더 직후 자동으로 나타나는 외곽선을 확인합니다
  *
  * ### 시나리오 2: 부모 리렌더로 인한 자식 리렌더
  * - 부모 컴포넌트가 리렌더될 때 자식도 함께 리렌더되는 현상을 관찰합니다
@@ -72,10 +77,10 @@ import "../PlaceholderPage.css";
  * - Context 값이 변경될 때 구독하는 모든 컴포넌트가 리렌더되는 것을 관찰합니다
  *
  * ## 사용 방법
- * 1. 페이지에 `<RerenderHeatmap enabledShortcut />` 추가
- * 2. 추적하고 싶은 컴포넌트를 `<Box>` 또는 `data-rerender="1"` 속성으로 마킹
- * 3. 앱을 사용하면서 `Cmd/Ctrl + Shift + R` 단축키 활성화
- * 4. 파란색으로 하이라이트되는 컴포넌트들을 관찰
+ * 1. 페이지에 `<RerenderHeatmap />` 추가 (단축키는 기본 활성화)
+ * 2. 추적하려는 컴포넌트를 `<Box label="...">`로 감싸거나 `useRenderCounter` 결과를 활용해 UI를 구성
+ * 3. 일반 사용 흐름에서 자동으로 점멸하는 요소를 확인하고 병목을 파악
+ * 4. 전체 스택을 한 번에 보고 싶을 때만 `Cmd/Ctrl + Shift + R` 단축키를 눌러 전역 플래시 실행
  * 5. 예상치 못한 리렌더가 있다면 최적화를 고려
  *
  * ## 최적화 전략
@@ -204,7 +209,10 @@ function CallbackTest() {
           }}
         >
           <ExpensiveChild label="Unoptimized" onClick={unoptimizedHandler} />
-          <ExpensiveChildMemo label="Optimized" onClick={optimizedHandler} />
+          <ExpensiveChildMemo
+            label="Optimized"
+            onClick={optimizedHandler}
+          />
         </div>
       </div>
     </Box>
@@ -225,6 +233,9 @@ function ExpensiveChild({
       <strong>{label}</strong>
       <div>Renders: {count}</div>
       <small>부모가 리렌더되면 항상 리렌더</small>
+      <button onClick={onClick} style={{ marginTop: 8 }}>
+        핸들러 호출
+      </button>
     </div>
   );
 }
@@ -243,6 +254,9 @@ const ExpensiveChildMemo = memo(function ExpensiveChildMemo({
       <strong>{label}</strong>
       <div>Renders: {count}</div>
       <small>onClick이 같으면 리렌더 안 됨</small>
+      <button onClick={onClick} style={{ marginTop: 8 }}>
+        핸들러 호출
+      </button>
     </div>
   );
 });
@@ -320,7 +334,7 @@ function MassRenderTest() {
           }}
         >
           {Array.from({ length: 12 }, (_, i) => (
-            <MiniCard key={i} index={i} trigger={trigger} />
+            <MiniCard key={i} index={i} />
           ))}
         </div>
 
@@ -332,32 +346,31 @@ function MassRenderTest() {
             borderRadius: 6,
           }}
         >
-          💡 버튼을 클릭한 후 <kbd>Cmd/Ctrl + Shift + R</kbd>을 누르면 모든
-          카드가 파란색으로 하이라이트됩니다!
+          💡 버튼을 클릭하면 각 카드가 즉시 점멸합니다. 전체 리스트를 한눈에
+          보고 싶을 때는 <kbd>Cmd/Ctrl + Shift + R</kbd> 단축키로 전역 플래시를
+          실행하세요.
         </div>
       </div>
     </Box>
   );
 }
 
-function MiniCard({ index, trigger }: { index: number; trigger: number }) {
-  const { count } = useRenderCounter();
+function MiniCard({ index }: { index: number }) {
+  const { count } = useRenderCounter(`MiniCard-${index}`);
 
   return (
-    <div
-      data-rerender="1"
+    <Box
+      label={`Card${index}`}
       style={{
         padding: 12,
         background: "#fff",
         borderRadius: 6,
         border: "1px solid #d1d5db",
-        position: "relative",
       }}
     >
-      <RerenderBadge label={`Card${index}`} count={count} />
       <div style={{ fontSize: 14 }}>Card {index}</div>
       <div style={{ fontSize: 11, color: "#6b7280" }}>Renders: {count}</div>
-    </div>
+    </Box>
   );
 }
 
@@ -840,13 +853,28 @@ function MyComponent() {
               overflow: "auto",
             }}
           >
-            {`import { useRenderCounter, RerenderBadge } from "../lib/dx-kit";
+            {`import { useEffect } from "react";
+import {
+  useRenderCounter,
+  useRerenderFlash,
+  RerenderBadge,
+} from "../lib/dx-kit";
 
 function CustomComponent() {
   const { count, label } = useRenderCounter("CustomComponent");
-  
+  const { active, triggerFlash } = useRerenderFlash();
+
+  useEffect(() => {
+    if (count > 1) {
+      triggerFlash();
+    }
+  }, [count, triggerFlash]);
+
   return (
-    <div data-rerender="1" style={{ position: "relative" }}>
+    <div
+      data-rerender={active ? "1" : undefined}
+      style={{ position: "relative" }}
+    >
       <RerenderBadge label={label || "Component"} count={count} />
       <div>Rendered {count} times</div>
     </div>
@@ -864,10 +892,18 @@ function CustomComponent() {
               overflow: "auto",
             }}
           >
-            {`// Box를 쓸 수 없는 경우 직접 속성 추가
-<div data-rerender="1">
-  이 div는 리렌더 하이라이트 대상입니다
-</div>`}
+            {`// Box를 쓰기 어려운 경우 useRerenderFlash로 직접 제어할 수 있습니다.
+const { active, triggerFlash } = useRerenderFlash(800);
+
+useEffect(() => {
+  triggerFlash();
+}, [someDependency, triggerFlash]);
+
+return (
+  <div data-rerender={active ? "1" : undefined}>
+    이 div는 리렌더 시 자동으로 하이라이트됩니다
+  </div>
+);`}
           </pre>
         </div>
 
