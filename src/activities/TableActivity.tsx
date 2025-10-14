@@ -32,6 +32,7 @@ type QueueStatus = {
   dispatched: number;
   remaining: number;
   completed: boolean;
+  canceled: boolean;
 };
 
 ensureAgGridModules();
@@ -65,12 +66,13 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
     if (pendingPushCountRef.current <= 0) {
       pushTimerRef.current = null;
       const status = queueStatusRef.current;
-      if (status && !status.completed) {
+      if (status && !status.completed && !status.canceled) {
         const completedStatus: QueueStatus = {
           ...status,
           dispatched: status.total,
           remaining: 0,
           completed: true,
+          canceled: false,
         };
         queueStatusRef.current = completedStatus;
         setQueueStatus(completedStatus);
@@ -90,6 +92,7 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
         dispatched,
         remaining,
         completed: remaining === 0,
+        canceled: false,
       };
       queueStatusRef.current = updatedStatus;
       setQueueStatus(updatedStatus);
@@ -113,13 +116,28 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
 
       const existing = queueStatusRef.current;
       if (existing && !existing.completed) {
-        const updated: QueueStatus = {
-          ...existing,
-          total: existing.total + count,
-          remaining: pendingPushCountRef.current,
-        };
-        queueStatusRef.current = updated;
-        setQueueStatus(updated);
+        if (existing.canceled) {
+          const batchId = `table-${Date.now()}`;
+          const initialStatus: QueueStatus = {
+            batchId,
+            total: count,
+            dispatched: 0,
+            remaining: pendingPushCountRef.current,
+            completed: false,
+            canceled: false,
+          };
+          queueStatusRef.current = initialStatus;
+          setQueueStatus(initialStatus);
+        } else {
+          const updated: QueueStatus = {
+            ...existing,
+            total: existing.total + count,
+            remaining: pendingPushCountRef.current,
+            canceled: false,
+          };
+          queueStatusRef.current = updated;
+          setQueueStatus(updated);
+        }
       } else {
         const batchId = `table-${Date.now()}`;
         const initialStatus: QueueStatus = {
@@ -128,6 +146,7 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
           dispatched: 0,
           remaining: pendingPushCountRef.current,
           completed: false,
+          canceled: false,
         };
         queueStatusRef.current = initialStatus;
         setQueueStatus(initialStatus);
@@ -205,6 +224,32 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
     [enqueueTablePushes],
   );
 
+  const cancelQueue = useCallback(() => {
+    if (pushTimerRef.current !== null) {
+      window.clearTimeout(pushTimerRef.current);
+    }
+    pushTimerRef.current = null;
+    pendingPushCountRef.current = 0;
+
+    const status = queueStatusRef.current;
+    if (status) {
+      const canceledStatus: QueueStatus = {
+        ...status,
+        remaining: 0,
+        completed: false,
+        canceled: true,
+      };
+      queueStatusRef.current = canceledStatus;
+      setQueueStatus(canceledStatus);
+    }
+  }, []);
+
+  const canCancelQueue =
+    queueStatus != null &&
+    !queueStatus.completed &&
+    !queueStatus.canceled &&
+    queueStatus.remaining > 0;
+
   return (
     <AppScreen appBar={{ title: "Table Activity" }}>
       <div className="activity">
@@ -232,6 +277,16 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
             <button type="button" onClick={() => pushTables(100)}>
               100개 쌓기
             </button>
+            <button
+              type="button"
+              onClick={cancelQueue}
+              disabled={!canCancelQueue}
+              style={{
+                opacity: canCancelQueue ? 1 : 0.5,
+              }}
+            >
+              중단
+            </button>
             <span style={{ fontWeight: 600 }}>
               현재 Table 스택: {tableStackCount.toLocaleString()}
             </span>
@@ -247,6 +302,8 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
               {queueStatus.total}
               {queueStatus.remaining > 0
                 ? ` • 대기 ${queueStatus.remaining}`
+                : queueStatus.canceled
+                ? " • 중단됨"
                 : queueStatus.completed
                 ? " • 완료됨"
                 : null}
