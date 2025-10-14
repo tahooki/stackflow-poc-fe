@@ -15,20 +15,26 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
   const { recordCount, setRecordCount, maxRecords } = useDatasetStore();
   const stack = useStack();
   const activities = stack.activities;
-  const { chartCount, tableCount } = useMemo(() => {
-    const counts = activities.reduce<{ chart: number; table: number }>(
+  const { chartCount, tableCount, imageCount } = useMemo(() => {
+    const counts = activities.reduce<{ chart: number; table: number; image: number }>(
       (accumulator, activity) => {
         if (activity.name === "chart") {
           accumulator.chart += 1;
         } else if (activity.name === "table") {
           accumulator.table += 1;
+        } else if (activity.name === "image-stack") {
+          accumulator.image += 1;
         }
         return accumulator;
       },
-      { chart: 0, table: 0 },
+      { chart: 0, table: 0, image: 0 },
     );
 
-    return { chartCount: counts.chart, tableCount: counts.table };
+    return {
+      chartCount: counts.chart,
+      tableCount: counts.table,
+      imageCount: counts.image,
+    };
   }, [activities]);
 
   const presets = [100, 1000, 5000, maxRecords];
@@ -85,6 +91,7 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
             <ul>
               <li>Chart activities stacked: {chartCount.toLocaleString()}</li>
               <li>Table activities stacked: {tableCount.toLocaleString()}</li>
+              <li>Image activities stacked: {imageCount.toLocaleString()}</li>
             </ul>
           </section>
 
@@ -96,6 +103,9 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
               </button>
               <button type="button" onClick={() => push("chart", {})}>
                 Open Chart Activity
+              </button>
+              <button type="button" onClick={() => push("image-stack", {})}>
+                Open Image Stack Activity
               </button>
               <button type="button" onClick={() => push("text", {})}>
                 Open Text Activity

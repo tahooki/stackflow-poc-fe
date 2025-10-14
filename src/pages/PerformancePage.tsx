@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import ChartActivity from "../activities/ChartActivity";
 import HomeActivity from "../activities/HomeActivity";
+import ImageStackActivity from "../activities/ImageStackActivity";
 import MemoryStressActivity from "../activities/MemoryStressActivity";
 import TextContentActivity from "../activities/TextContentActivity";
 import TableActivity from "../activities/TableActivity";
@@ -24,6 +25,11 @@ const stackRoutes: StackRouteConfig[] = [
     name: "chart",
     activity: ChartActivity,
     route: "/chart",
+  },
+  {
+    name: "image-stack",
+    activity: ImageStackActivity,
+    route: "/images",
   },
   {
     name: "memory",
