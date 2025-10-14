@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HomePage } from "./pages/HomePage";
 import { PerformancePage } from "./pages/PerformancePage";
 import { DxKitPage } from "./pages/DxKitPage";
@@ -16,9 +16,10 @@ const App = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/scenarios/*" element={<ScenarioApp />} />
+        <Route path="/" element={<PerformancePage />} />
         <Route path="/performance/*" element={<PerformancePage />} />
+        <Route path="/home" element={<HomePage />} />
+        <Route path="/scenarios/*" element={<ScenarioApp />} />
 
         {/* DX-Kit 메인 허브 */}
         <Route path="/dx-kit" element={<DxKitPage />} />
@@ -31,7 +32,7 @@ const App = () => {
         <Route path="/dx-kit/occupancy" element={<OccupancyHUDTestPage />} />
         <Route path="/dx-kit/jank" element={<JankAnalyzerTestPage />} />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<PerformancePage />} />
       </Routes>
     </BrowserRouter>
   );
