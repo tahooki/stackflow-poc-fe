@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import { AppScreen } from "@stackflow/plugin-basic-ui";
+import { useStack } from "@stackflow/react";
 import type { ActivityComponentType } from "@stackflow/react";
 
 import { useNavActions } from "../hooks/useNavActions";
 import { getWaferDatasetMeta } from "../lib/waferDataset";
 import { useDatasetStore } from "../stores/datasetStore";
-import { useFlow } from "../lib/NFXStack";
 
 export type HomeActivityParams = Record<string, never>;
 
@@ -13,17 +13,17 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
   const { push } = useNavActions();
   const meta = getWaferDatasetMeta();
   const { recordCount, setRecordCount, maxRecords } = useDatasetStore();
-  const flow = useFlow();
-  const activities = flow.stack?.activities ?? [];
+  const stack = useStack();
+  const activities = stack.activities;
   const { chartCount, tableCount } = useMemo(() => {
-    const counts = activities.reduce(
-      (acc, activity) => {
+    const counts = activities.reduce<{ chart: number; table: number }>(
+      (accumulator, activity) => {
         if (activity.name === "chart") {
-          acc.chart += 1;
+          accumulator.chart += 1;
         } else if (activity.name === "table") {
-          acc.table += 1;
+          accumulator.table += 1;
         }
-        return acc;
+        return accumulator;
       },
       { chart: 0, table: 0 },
     );

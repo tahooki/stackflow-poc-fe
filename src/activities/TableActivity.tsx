@@ -2,8 +2,9 @@ import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 
 import { AppScreen } from "@stackflow/plugin-basic-ui";
+import { useStack } from "@stackflow/react";
 import type { ActivityComponentType } from "@stackflow/react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ColDef } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 
@@ -12,7 +13,6 @@ import { createWaferDatasetCopy } from "../lib/waferDataset";
 import { useDatasetStore } from "../stores/datasetStore";
 import type { DatasetState } from "../stores/datasetStore";
 import { ensureAgGridModules } from "../lib/agGridModules";
-import { useFlow } from "../lib/NFXStack";
 
 export type TableActivityParams = Record<string, never>;
 
@@ -31,15 +31,54 @@ ensureAgGridModules();
 const TableActivity: ActivityComponentType<TableActivityParams> = () => {
   const { push } = useNavActions();
   const recordCount = useDatasetStore((state: DatasetState) => state.recordCount);
-  const flow = useFlow();
-  const activities = flow.stack?.activities ?? [];
-  const tableStackCount = useMemo(
-    () =>
-      activities.reduce(
-        (count, activity) => (activity.name === "table" ? count + 1 : count),
-        0,
-      ),
-    [activities],
+  const stack = useStack();
+  const tableStackCount = stack.activities.reduce(
+    (count, activity) => (activity.name === "table" ? count + 1 : count),
+    0,
+  );
+  const pendingPushCountRef = useRef(0);
+  const pushTimerRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (pushTimerRef.current !== null) {
+        window.clearTimeout(pushTimerRef.current);
+      }
+      pushTimerRef.current = null;
+      pendingPushCountRef.current = 0;
+    },
+    [],
+  );
+  const processNextPush = useCallback(() => {
+    if (pendingPushCountRef.current <= 0) {
+      pushTimerRef.current = null;
+      return;
+    }
+
+    pendingPushCountRef.current -= 1;
+    push("table", {});
+
+    if (pendingPushCountRef.current <= 0) {
+      pushTimerRef.current = null;
+      return;
+    }
+
+    pushTimerRef.current = window.setTimeout(processNextPush, 100);
+  }, [push]);
+
+  const enqueueTablePushes = useCallback(
+    (count: number) => {
+      if (count <= 0) {
+        return;
+      }
+
+      pendingPushCountRef.current += count;
+
+      if (pushTimerRef.current === null) {
+        processNextPush();
+      }
+    },
+    [processNextPush],
   );
   const dataset = useMemo(() => createWaferDatasetCopy(recordCount), [recordCount]);
 
@@ -97,16 +136,14 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
     []
   );
   const pushTable = useCallback(() => {
-    push("table", {});
-  }, [push]);
+    enqueueTablePushes(1);
+  }, [enqueueTablePushes]);
 
   const pushTables = useCallback(
     (times: number) => {
-      for (let iteration = 0; iteration < times; iteration += 1) {
-        push("table", {});
-      }
+      enqueueTablePushes(times);
     },
-    [push],
+    [enqueueTablePushes],
   );
 
   return (
@@ -132,6 +169,9 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
             </button>
             <button type="button" onClick={() => pushTables(10)}>
               10개 쌓기
+            </button>
+            <button type="button" onClick={() => pushTables(100)}>
+              100개 쌓기
             </button>
             <span style={{ fontWeight: 600 }}>
               현재 Table 스택: {tableStackCount.toLocaleString()}

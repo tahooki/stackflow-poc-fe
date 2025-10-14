@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import Chart from "chart.js/auto";
 import { AppScreen } from "@stackflow/plugin-basic-ui";
+import { useStack } from "@stackflow/react";
 import type { ActivityComponentType } from "@stackflow/react";
 
 import { useNavActions } from "../hooks/useNavActions";
 import { createWaferDatasetCopy } from "../lib/waferDataset";
 import { useDatasetStore } from "../stores/datasetStore";
 import type { DatasetState } from "../stores/datasetStore";
-import { useFlow } from "../lib/NFXStack";
 
 export type ChartActivityParams = Record<string, never>;
 
@@ -45,15 +45,55 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
   const { push } = useNavActions();
   const recordCount = useDatasetStore((state: DatasetState) => state.recordCount);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const flow = useFlow();
-  const activities = flow.stack?.activities ?? [];
-  const chartStackCount = useMemo(
-    () =>
-      activities.reduce(
-        (count, activity) => (activity.name === "chart" ? count + 1 : count),
-        0,
-      ),
-    [activities],
+  const stack = useStack();
+  const chartStackCount = stack.activities.reduce(
+    (count, activity) => (activity.name === "chart" ? count + 1 : count),
+    0,
+  );
+  const pendingPushCountRef = useRef(0);
+  const pushTimerRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (pushTimerRef.current !== null) {
+        window.clearTimeout(pushTimerRef.current);
+      }
+      pushTimerRef.current = null;
+      pendingPushCountRef.current = 0;
+    },
+    [],
+  );
+
+  const processNextPush = useCallback(() => {
+    if (pendingPushCountRef.current <= 0) {
+      pushTimerRef.current = null;
+      return;
+    }
+
+    pendingPushCountRef.current -= 1;
+    push("chart", {});
+
+    if (pendingPushCountRef.current <= 0) {
+      pushTimerRef.current = null;
+      return;
+    }
+
+    pushTimerRef.current = window.setTimeout(processNextPush, 100);
+  }, [push]);
+
+  const enqueueChartPushes = useCallback(
+    (count: number) => {
+      if (count <= 0) {
+        return;
+      }
+
+      pendingPushCountRef.current += count;
+
+      if (pushTimerRef.current === null) {
+        processNextPush();
+      }
+    },
+    [processNextPush],
   );
 
   const { timeline, sampleStep, sourceLength } = useMemo<{
@@ -140,16 +180,14 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
   }, [timeline]);
 
   const pushChart = useCallback(() => {
-    push("chart", {});
-  }, [push]);
+    enqueueChartPushes(1);
+  }, [enqueueChartPushes]);
 
   const pushCharts = useCallback(
     (times: number) => {
-      for (let iteration = 0; iteration < times; iteration += 1) {
-        push("chart", {});
-      }
+      enqueueChartPushes(times);
     },
-    [push],
+    [enqueueChartPushes],
   );
 
   return (
@@ -178,6 +216,9 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
             </button>
             <button type="button" onClick={() => pushCharts(10)}>
               10개 쌓기
+            </button>
+            <button type="button" onClick={() => pushCharts(100)}>
+              100개 쌓기
             </button>
             <span style={{ fontWeight: 600 }}>
               현재 Chart 스택: {chartStackCount.toLocaleString()}
