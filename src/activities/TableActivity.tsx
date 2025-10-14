@@ -4,7 +4,7 @@ import "ag-grid-community/styles/ag-theme-quartz.css";
 import { AppScreen } from "@stackflow/plugin-basic-ui";
 import { useStack } from "@stackflow/react";
 import type { ActivityComponentType } from "@stackflow/react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ColDef } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 
@@ -26,6 +26,14 @@ type WaferSummaryRow = {
   defectDensity: number | null;
 };
 
+type QueueStatus = {
+  batchId: string;
+  total: number;
+  dispatched: number;
+  remaining: number;
+  completed: boolean;
+};
+
 ensureAgGridModules();
 
 const TableActivity: ActivityComponentType<TableActivityParams> = () => {
@@ -38,6 +46,8 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
   );
   const pendingPushCountRef = useRef(0);
   const pushTimerRef = useRef<number | null>(null);
+  const queueStatusRef = useRef<QueueStatus | null>(null);
+  const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null);
 
   useEffect(
     () => () => {
@@ -46,17 +56,44 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
       }
       pushTimerRef.current = null;
       pendingPushCountRef.current = 0;
+      queueStatusRef.current = null;
+      setQueueStatus(null);
     },
     [],
   );
   const processNextPush = useCallback(() => {
     if (pendingPushCountRef.current <= 0) {
       pushTimerRef.current = null;
+      const status = queueStatusRef.current;
+      if (status && !status.completed) {
+        const completedStatus: QueueStatus = {
+          ...status,
+          dispatched: status.total,
+          remaining: 0,
+          completed: true,
+        };
+        queueStatusRef.current = completedStatus;
+        setQueueStatus(completedStatus);
+      }
       return;
     }
 
     pendingPushCountRef.current -= 1;
     push("table", {});
+
+    const status = queueStatusRef.current;
+    if (status) {
+      const dispatched = Math.min(status.total, status.dispatched + 1);
+      const remaining = pendingPushCountRef.current;
+      const updatedStatus: QueueStatus = {
+        ...status,
+        dispatched,
+        remaining,
+        completed: remaining === 0,
+      };
+      queueStatusRef.current = updatedStatus;
+      setQueueStatus(updatedStatus);
+    }
 
     if (pendingPushCountRef.current <= 0) {
       pushTimerRef.current = null;
@@ -73,6 +110,28 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
       }
 
       pendingPushCountRef.current += count;
+
+      const existing = queueStatusRef.current;
+      if (existing && !existing.completed) {
+        const updated: QueueStatus = {
+          ...existing,
+          total: existing.total + count,
+          remaining: pendingPushCountRef.current,
+        };
+        queueStatusRef.current = updated;
+        setQueueStatus(updated);
+      } else {
+        const batchId = `table-${Date.now()}`;
+        const initialStatus: QueueStatus = {
+          batchId,
+          total: count,
+          dispatched: 0,
+          remaining: pendingPushCountRef.current,
+          completed: false,
+        };
+        queueStatusRef.current = initialStatus;
+        setQueueStatus(initialStatus);
+      }
 
       if (pushTimerRef.current === null) {
         processNextPush();
@@ -177,6 +236,22 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
               현재 Table 스택: {tableStackCount.toLocaleString()}
             </span>
           </div>
+          {queueStatus ? (
+            <p
+              style={{
+                marginTop: 8,
+                color: "#475569",
+              }}
+            >
+              배치 {queueStatus.batchId} • 완료 {queueStatus.dispatched}/
+              {queueStatus.total}
+              {queueStatus.remaining > 0
+                ? ` • 대기 ${queueStatus.remaining}`
+                : queueStatus.completed
+                ? " • 완료됨"
+                : null}
+            </p>
+          ) : null}
         </section>
 
         <div className="activity__content">
