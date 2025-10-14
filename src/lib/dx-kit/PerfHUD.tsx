@@ -34,18 +34,43 @@ function useFps(sampleMs = 500) {
 
 /**
  * Chromium/Android에서만 제공되는 `performance.memory`를 이용해 JS Heap 사용량을
- * 1초마다 MB 단위로 샘플링합니다. 지원하지 않는 브라우저에서는 null을 반환합니다.
+ * rAF 기반으로 샘플링합니다. requestAnimationFrame 루프 내에서 최소 간격을 보장해
+ * 모바일 환경에서 interval 클램핑 없이도 빠르게 반영되도록 합니다.
  */
-function useHeapMB() {
+function useHeapMB(sampleMs = 200) {
   const [mb, setMb] = useState<number | null>(null);
+  const lastValueRef = useRef<number | null>(null);
+
   useEffect(() => {
-    const id = setInterval(() => {
-      const m: any = (performance as any).memory;
-      if (m?.usedJSHeapSize)
-        setMb(Math.round(m.usedJSHeapSize / (1024 * 1024)));
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
+    let raf = 0;
+    let lastSampleTs = performance.now();
+
+    const readHeap = () => {
+      const memory: any = (performance as any).memory;
+      if (!memory || typeof memory.usedJSHeapSize !== "number") {
+        return null;
+      }
+
+      const mbValue = Math.round((memory.usedJSHeapSize / (1024 * 1024)) * 10) / 10;
+      return mbValue;
+    };
+
+    const tick = (now: number) => {
+      if (now - lastSampleTs >= sampleMs) {
+        const heapMb = readHeap();
+        if (heapMb !== null && heapMb !== lastValueRef.current) {
+          lastValueRef.current = heapMb;
+          setMb(heapMb);
+        }
+        lastSampleTs = now;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [sampleMs]);
+
   return mb;
 }
 
@@ -85,7 +110,9 @@ export function PerfHUD({
   const fps = useFps();
   const heap = useHeapMB();
   const longTasks = useLongTasks();
-  const dangerOn = (fps && fps < danger.fps) || (heap && heap > danger.heapMB);
+  const dangerOn =
+    (typeof fps === "number" && fps < danger.fps) ||
+    (typeof heap === "number" && heap > danger.heapMB);
   const pos = {
     "top-left": { top: 10, left: 10 },
     "top-right": { top: 10, right: 10 },
@@ -112,7 +139,7 @@ export function PerfHUD({
       }}
     >
       <div>FPS: {fps}</div>
-      <div>Heap: {heap ? `${heap}MB` : "N/A"}</div>
+      <div>Heap: {heap != null ? `${heap}MB` : "N/A"}</div>
       <div>LongTasks: {longTasks}</div>
     </div>
   );
