@@ -10,8 +10,6 @@ import { AgGridReact } from "ag-grid-react";
 
 import { useNavActions } from "../hooks/useNavActions";
 import { createWaferDatasetCopy } from "../lib/waferDataset";
-import { useDatasetStore } from "../stores/datasetStore";
-import type { DatasetState } from "../stores/datasetStore";
 import { ensureAgGridModules } from "../lib/agGridModules";
 
 export type TableActivityParams = Record<string, never>;
@@ -39,12 +37,9 @@ ensureAgGridModules();
 
 const TableActivity: ActivityComponentType<TableActivityParams> = () => {
   const { push } = useNavActions();
-  const recordCount = useDatasetStore((state: DatasetState) => state.recordCount);
+  const recordCount = 1000;
   const stack = useStack();
-  const tableStackCount = stack.activities.reduce(
-    (count, activity) => (activity.name === "table" ? count + 1 : count),
-    0,
-  );
+  const tableStackCount = stack.activities.length;
   const pendingPushCountRef = useRef(0);
   const pushTimerRef = useRef<number | null>(null);
   const queueStatusRef = useRef<QueueStatus | null>(null);
@@ -60,7 +55,7 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
       queueStatusRef.current = null;
       setQueueStatus(null);
     },
-    [],
+    []
   );
   const processNextPush = useCallback(() => {
     if (pendingPushCountRef.current <= 0) {
@@ -156,9 +151,9 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
         processNextPush();
       }
     },
-    [processNextPush],
+    [processNextPush]
   );
-  const dataset = useMemo(() => createWaferDatasetCopy(recordCount), [recordCount]);
+  const dataset = useMemo(() => createWaferDatasetCopy(1000), [recordCount]);
 
   const rowData = useMemo<WaferSummaryRow[]>(
     () =>
@@ -186,14 +181,20 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
     () => [
       { headerName: "Wafer", field: "waferId", minWidth: 140, sortable: true },
       { headerName: "Lot", field: "lotId", minWidth: 100, sortable: true },
-      { headerName: "Process Step", field: "processStep", minWidth: 160, flex: 1 },
+      {
+        headerName: "Process Step",
+        field: "processStep",
+        minWidth: 160,
+        flex: 1,
+      },
       { headerName: "Equipment", field: "equipmentId", minWidth: 140 },
       { headerName: "Timestamp", field: "timestamp", minWidth: 200 },
       {
         headerName: "Yield (%)",
         field: "yieldPercent",
         type: "numericColumn",
-        valueFormatter: ({ value }) => (typeof value === "number" ? value.toFixed(2) : "N/A"),
+        valueFormatter: ({ value }) =>
+          typeof value === "number" ? value.toFixed(2) : "N/A",
         filter: "agNumberColumnFilter",
         minWidth: 140,
       },
@@ -201,7 +202,8 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
         headerName: "Defect Density",
         field: "defectDensity",
         type: "numericColumn",
-        valueFormatter: ({ value }) => (typeof value === "number" ? value.toFixed(3) : "N/A"),
+        valueFormatter: ({ value }) =>
+          typeof value === "number" ? value.toFixed(3) : "N/A",
         filter: "agNumberColumnFilter",
         minWidth: 160,
       },
@@ -221,7 +223,7 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
     (times: number) => {
       enqueueTablePushes(times);
     },
-    [enqueueTablePushes],
+    [enqueueTablePushes]
   );
 
   const cancelQueue = useCallback(() => {
@@ -251,11 +253,23 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
     queueStatus.remaining > 0;
 
   return (
-    <AppScreen appBar={{ title: "Table Activity" }}>
+    <AppScreen
+      appBar={{
+        title: "Table Activity",
+        renderRight: () => (
+          // 홈으로
+          <button type="button" onClick={() => push("home", {})}>
+            홈으로
+          </button>
+        ),
+      }}
+    >
       <div className="activity">
         <section className="activity__header">
           <h1>Wafer Dataset Table</h1>
-          <p>{rowData.length.toLocaleString()} records loaded into this activity.</p>
+          <p>
+            {rowData.length.toLocaleString()} records loaded into this activity.
+          </p>
           <div
             style={{
               display: "flex",
@@ -313,7 +327,10 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
 
         <div className="activity__content">
           <section className="activity__card">
-            <div className="ag-theme-quartz" style={{ height: 560, width: "100%" }}>
+            <div
+              className="ag-theme-quartz"
+              style={{ height: 560, width: "100%" }}
+            >
               <AgGridReact<WaferSummaryRow>
                 rowData={rowData}
                 columnDefs={columnDefs}

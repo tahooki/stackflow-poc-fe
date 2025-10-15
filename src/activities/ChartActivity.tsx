@@ -6,8 +6,6 @@ import type { ActivityComponentType } from "@stackflow/react";
 
 import { useNavActions } from "../hooks/useNavActions";
 import { createWaferDatasetCopy } from "../lib/waferDataset";
-import { useDatasetStore } from "../stores/datasetStore";
-import type { DatasetState } from "../stores/datasetStore";
 
 export type ChartActivityParams = Record<string, never>;
 
@@ -35,21 +33,17 @@ const buildTimeline = (limit: number) => {
         typeof entry.yield?.estimated_yield_percentage === "number"
           ? entry.yield.estimated_yield_percentage
           : typeof entry.yield?.final_yield_percentage === "number"
-            ? entry.yield.final_yield_percentage
-            : null,
+          ? entry.yield.final_yield_percentage
+          : null,
     }))
     .filter((point) => point.yieldValue !== null);
 };
 
 const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
   const { push } = useNavActions();
-  const recordCount = useDatasetStore((state: DatasetState) => state.recordCount);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stack = useStack();
-  const chartStackCount = stack.activities.reduce(
-    (count, activity) => (activity.name === "chart" ? count + 1 : count),
-    0,
-  );
+  const chartStackCount = stack.activities.length;
   const pendingPushCountRef = useRef(0);
   const pushTimerRef = useRef<number | null>(null);
 
@@ -61,7 +55,7 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
       pushTimerRef.current = null;
       pendingPushCountRef.current = 0;
     },
-    [],
+    []
   );
 
   const processNextPush = useCallback(() => {
@@ -93,7 +87,7 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
         processNextPush();
       }
     },
-    [processNextPush],
+    [processNextPush]
   );
 
   const { timeline, sampleStep, sourceLength } = useMemo<{
@@ -101,7 +95,7 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
     sampleStep: number;
     sourceLength: number;
   }>(() => {
-    const raw = buildTimeline(recordCount);
+    const raw = buildTimeline(1000);
     if (raw.length === 0) {
       return { timeline: raw, sampleStep: 1, sourceLength: raw.length };
     }
@@ -115,7 +109,7 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
     const step = Math.ceil(raw.length / maxPoints);
     const sampled = raw.filter((_, index) => index % step === 0);
     return { timeline: sampled, sampleStep: step, sourceLength: raw.length };
-  }, [recordCount]);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -130,7 +124,7 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
 
     const width = Math.max(
       Math.min(timeline.length * PX_PER_POINT, MAX_CANVAS_WIDTH),
-      MIN_WIDTH,
+      MIN_WIDTH
     );
     canvas.width = width;
     canvas.height = CHART_HEIGHT;
@@ -187,16 +181,27 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
     (times: number) => {
       enqueueChartPushes(times);
     },
-    [enqueueChartPushes],
+    [enqueueChartPushes]
   );
 
   return (
-    <AppScreen appBar={{ title: "Chart Activity" }}>
+    <AppScreen
+      appBar={{
+        title: "Chart Activity",
+        renderRight: () => (
+          // 홈으로
+          <button type="button" onClick={() => push("home", {})}>
+            홈으로
+          </button>
+        ),
+      }}
+    >
       <div className="activity">
         <section className="activity__header">
           <h1>Yield Trend</h1>
           <p>
-            {sourceLength.toLocaleString()} records selected · rendering {timeline.length.toLocaleString()} points
+            {sourceLength.toLocaleString()} records selected · rendering{" "}
+            {timeline.length.toLocaleString()} points
             {sampleStep > 1 ? ` (sampled every ${sampleStep} points).` : "."}
           </p>
           <div
@@ -235,8 +240,11 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
                   style={{
                     display: "block",
                     width: `${Math.max(
-                      Math.min(timeline.length * PX_PER_POINT, MAX_CANVAS_WIDTH),
-                      MIN_WIDTH,
+                      Math.min(
+                        timeline.length * PX_PER_POINT,
+                        MAX_CANVAS_WIDTH
+                      ),
+                      MIN_WIDTH
                     )}px`,
                     height: `${CHART_HEIGHT}px`,
                     minWidth: "100%",

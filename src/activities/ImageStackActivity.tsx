@@ -84,7 +84,17 @@ const ImageStackActivity: ActivityComponentType<
   );
 
   return (
-    <AppScreen appBar={{ title: "Image Stack Activity" }}>
+    <AppScreen
+      appBar={{
+        title: "Image Stack Activity",
+        renderRight: () => (
+          // 홈으로
+          <button type="button" onClick={() => push("home", {})}>
+            홈으로
+          </button>
+        ),
+      }}
+    >
       <div className="activity">
         <section className="activity__header">
           <h1>Image Gallery Slice</h1>

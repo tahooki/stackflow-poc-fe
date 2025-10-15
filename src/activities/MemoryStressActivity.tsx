@@ -174,12 +174,9 @@ const MemoryStressActivity: ActivityComponentType<
       appBar={{
         title,
         renderRight: () => (
-          <button
-            type="button"
-            className="app-bar__action"
-            onClick={() => push("memory", baseParams)}
-          >
-            복제
+          // 홈으로
+          <button type="button" onClick={() => push("home", {})}>
+            홈으로
           </button>
         ),
       }}
