@@ -1,33 +1,38 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppScreen } from "@stackflow/plugin-basic-ui";
-import { useStack } from "@stackflow/react";
 import type { ActivityComponentType } from "@stackflow/react";
 import { useNavActions } from "../hooks/useNavActions";
 
 export type TextContentActivityParams = Record<string, never>;
 
-type QueueStatus = {
-  batchId: string;
-  total: number;
-  dispatched: number;
-  remaining: number;
-  completed: boolean;
+const TEXT_DISPATCH_COUNT_KEY = "text-activity-dispatched-count";
+
+const parseStoredCount = (raw: string | null) => {
+  if (!raw) {
+    return 0;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  if (Number.isNaN(parsed) || parsed < 0) {
+    return 0;
+  }
+  return parsed;
 };
 
-const TextContentActivity: ActivityComponentType<TextContentActivityParams> = () => {
-  const stack = useStack();
+const readStoredCount = () => {
+  if (typeof window === "undefined") {
+    return 0;
+  }
+  return parseStoredCount(window.localStorage.getItem(TEXT_DISPATCH_COUNT_KEY));
+};
+
+const TextContentActivity: ActivityComponentType<
+  TextContentActivityParams
+> = () => {
   const { push } = useNavActions();
   const pendingPushCountRef = useRef(0);
   const pushTimerRef = useRef<number | null>(null);
-  const queueStatusRef = useRef<QueueStatus | null>(null);
-  const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null);
-
-  const textActivityCount = useMemo(
-    () =>
-      stack.activities.reduce((count, activity) => {
-        return activity.name === "text" ? count + 1 : count;
-      }, 0),
-    [stack.activities]
+  const [dispatchedCount, setDispatchedCount] = useState<number>(() =>
+    readStoredCount()
   );
 
   useEffect(
@@ -37,45 +42,47 @@ const TextContentActivity: ActivityComponentType<TextContentActivityParams> = ()
       }
       pushTimerRef.current = null;
       pendingPushCountRef.current = 0;
-      queueStatusRef.current = null;
-      setQueueStatus(null);
     },
     []
   );
 
+  const updateDispatchedCount = useCallback((increment: number) => {
+    if (increment === 0) {
+      return;
+    }
+    setDispatchedCount((prev) => {
+      const next = Math.max(prev + increment, 0);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(TEXT_DISPATCH_COUNT_KEY, next.toString(10));
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === TEXT_DISPATCH_COUNT_KEY) {
+        setDispatchedCount(parseStoredCount(event.newValue));
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
+
   const processNextPush = useCallback(() => {
     if (pendingPushCountRef.current <= 0) {
       pushTimerRef.current = null;
-      const status = queueStatusRef.current;
-      if (status && !status.completed) {
-        const completedStatus: QueueStatus = {
-          ...status,
-          dispatched: status.total,
-          remaining: 0,
-          completed: true,
-        };
-        queueStatusRef.current = completedStatus;
-        setQueueStatus(completedStatus);
-      }
       return;
     }
 
     pendingPushCountRef.current -= 1;
     push("text", {});
-
-    const status = queueStatusRef.current;
-    if (status) {
-      const dispatched = Math.min(status.total, status.dispatched + 1);
-      const remaining = pendingPushCountRef.current;
-      const updatedStatus: QueueStatus = {
-        ...status,
-        dispatched,
-        remaining,
-        completed: remaining === 0,
-      };
-      queueStatusRef.current = updatedStatus;
-      setQueueStatus(updatedStatus);
-    }
+    updateDispatchedCount(1);
 
     if (pendingPushCountRef.current <= 0) {
       pushTimerRef.current = null;
@@ -83,7 +90,7 @@ const TextContentActivity: ActivityComponentType<TextContentActivityParams> = ()
     }
 
     pushTimerRef.current = window.setTimeout(processNextPush, 100);
-  }, [push]);
+  }, [push, updateDispatchedCount]);
 
   const pushCopies = useCallback(
     (count: number) => {
@@ -92,28 +99,6 @@ const TextContentActivity: ActivityComponentType<TextContentActivityParams> = ()
       }
 
       pendingPushCountRef.current += count;
-
-      const existing = queueStatusRef.current;
-      if (existing && !existing.completed) {
-        const updated: QueueStatus = {
-          ...existing,
-          total: existing.total + count,
-          remaining: pendingPushCountRef.current,
-        };
-        queueStatusRef.current = updated;
-        setQueueStatus(updated);
-      } else {
-        const batchId = `text-${Date.now()}`;
-        const initialStatus: QueueStatus = {
-          batchId,
-          total: count,
-          dispatched: 0,
-          remaining: pendingPushCountRef.current,
-          completed: false,
-        };
-        queueStatusRef.current = initialStatus;
-        setQueueStatus(initialStatus);
-      }
 
       if (pushTimerRef.current === null) {
         processNextPush();
@@ -138,24 +123,8 @@ const TextContentActivity: ActivityComponentType<TextContentActivityParams> = ()
               color: "#334155",
             }}
           >
-            현재 텍스트 스택 수: {textActivityCount.toLocaleString()}
+            현재 텍스트 스택 수: {dispatchedCount.toLocaleString()}
           </p>
-          {queueStatus ? (
-            <p
-              style={{
-                marginTop: 8,
-                color: "#475569",
-              }}
-            >
-              배치 {queueStatus.batchId} • 완료 {queueStatus.dispatched}/
-              {queueStatus.total}
-              {queueStatus.remaining > 0
-                ? ` • 대기 ${queueStatus.remaining}`
-                : queueStatus.completed
-                ? " • 완료됨"
-                : null}
-            </p>
-          ) : null}
           <div
             style={{
               display: "flex",
