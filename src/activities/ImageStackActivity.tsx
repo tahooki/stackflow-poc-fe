@@ -5,6 +5,10 @@ import type { ActivityComponentType } from "@stackflow/react";
 import { useNavActions } from "../hooks/useNavActions";
 import { usePushQueue } from "../hooks/usePushQueue";
 import { useStackCount } from "../hooks/useStackCount";
+import { performanceTracker } from "../lib/performanceTracker";
+import { memoryUtils } from "../lib/memoryUtils";
+import { useStack } from "@stackflow/react";
+import { useEffect } from "react";
 
 export type ImageStackActivityParams = Record<string, never>;
 
@@ -16,6 +20,7 @@ const ImageStackActivity: ActivityComponentType<
   ImageStackActivityParams
 > = () => {
   const { push } = useNavActions();
+  const stack = useStack();
   const { stackCount } = useStackCount({
     activityName: "image-stack",
   });
@@ -23,6 +28,17 @@ const ImageStackActivity: ActivityComponentType<
     usePushQueue({
       activityName: "image-stack",
     });
+
+  // 성능 데이터 기록
+  useEffect(() => {
+    const memoryUsageMB = memoryUtils.getCurrentMemoryUsage();
+    performanceTracker.recordPerformance({
+      activityName: "image-stack",
+      memoryUsageMB,
+      stackCount,
+      stackDepth: stack.activities.length,
+    });
+  }, [stackCount, stack.activities.length]);
 
   const imageSources = useMemo(
     () =>

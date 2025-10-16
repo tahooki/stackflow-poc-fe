@@ -14,6 +14,9 @@ import {
   type GradualBuildOptions,
   type HeavyPayload,
 } from "../lib/memoryOverload";
+import { performanceTracker } from "../lib/performanceTracker";
+import { memoryUtils } from "../lib/memoryUtils";
+import { useStack } from "@stackflow/react";
 
 const BYTES_PER_MB = 1024 * 1024;
 const DEFAULT_PAYLOAD_MB = 5;
@@ -38,12 +41,24 @@ const MemoryStressActivity: ActivityComponentType<
 > = (props: { params: MemoryStressActivityParams }) => {
   const { params } = props;
   const { push, pop } = useNavActions();
+  const stack = useStack();
   const { stackCount: memoryStackCount } = useStackCount({
     activityName: "memory",
   });
   const { queueStatus, cancelQueue, canCancelQueue } = usePushQueue({
     activityName: "memory",
   });
+
+  // 성능 데이터 기록
+  useEffect(() => {
+    const memoryUsageMB = memoryUtils.getCurrentMemoryUsage();
+    performanceTracker.recordPerformance({
+      activityName: "memory",
+      memoryUsageMB,
+      stackCount: memoryStackCount,
+      stackDepth: stack.activities.length,
+    });
+  }, [memoryStackCount, stack.activities.length]);
   const [stackSnapshot, setStackSnapshot] = useState<HeavyPayload[]>(() => [
     ...getHeavyPayloadStack(),
   ]);

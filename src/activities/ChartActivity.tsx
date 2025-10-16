@@ -7,6 +7,9 @@ import { useNavActions } from "../hooks/useNavActions";
 import { usePushQueue } from "../hooks/usePushQueue";
 import { useStackCount } from "../hooks/useStackCount";
 import { createWaferDatasetCopy } from "../lib/waferDataset";
+import { performanceTracker } from "../lib/performanceTracker";
+import { memoryUtils } from "../lib/memoryUtils";
+import { useStack } from "@stackflow/react";
 
 export type ChartActivityParams = Record<string, never>;
 
@@ -42,6 +45,7 @@ const buildTimeline = (limit: number) => {
 
 const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
   const { push } = useNavActions();
+  const stack = useStack();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const { stackCount: chartStackCount } = useStackCount({
     activityName: "chart",
@@ -50,6 +54,17 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
     usePushQueue({
       activityName: "chart",
     });
+
+  // 성능 데이터 기록
+  useEffect(() => {
+    const memoryUsageMB = memoryUtils.getCurrentMemoryUsage();
+    performanceTracker.recordPerformance({
+      activityName: "chart",
+      memoryUsageMB,
+      stackCount: chartStackCount,
+      stackDepth: stack.activities.length,
+    });
+  }, [chartStackCount, stack.activities.length]);
 
   const { timeline, sampleStep, sourceLength } = useMemo<{
     timeline: TimelinePoint[];

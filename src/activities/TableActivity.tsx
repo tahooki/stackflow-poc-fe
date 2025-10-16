@@ -12,6 +12,10 @@ import { usePushQueue } from "../hooks/usePushQueue";
 import { useStackCount } from "../hooks/useStackCount";
 import { createWaferDatasetCopy } from "../lib/waferDataset";
 import { ensureAgGridModules } from "../lib/agGridModules";
+import { performanceTracker } from "../lib/performanceTracker";
+import { memoryUtils } from "../lib/memoryUtils";
+import { useStack } from "@stackflow/react";
+import { useEffect } from "react";
 
 export type TableActivityParams = Record<string, never>;
 
@@ -29,14 +33,25 @@ ensureAgGridModules();
 
 const TableActivity: ActivityComponentType<TableActivityParams> = () => {
   const { push } = useNavActions();
+  const stack = useStack();
   const recordCount = 1000;
   const { stackCount: tableStackCount } = useStackCount({
     activityName: "table",
   });
-  const { queueStatus, enqueuePushes, cancelQueue, canCancelQueue } =
-    usePushQueue({
+  const { queueStatus, enqueuePushes } = usePushQueue({
+    activityName: "table",
+  });
+
+  // 성능 데이터 기록
+  useEffect(() => {
+    const memoryUsageMB = memoryUtils.getCurrentMemoryUsage();
+    performanceTracker.recordPerformance({
       activityName: "table",
+      memoryUsageMB,
+      stackCount: tableStackCount,
+      stackDepth: stack.activities.length,
     });
+  }, [tableStackCount, stack.activities.length]);
   const dataset = useMemo(() => createWaferDatasetCopy(1000), [recordCount]);
 
   const rowData = useMemo<WaferSummaryRow[]>(
