@@ -244,6 +244,19 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
                   <div>Max: {memoryStats.max.toFixed(1)} MB</div>
                   <div>Activities: {memoryStats.count}</div>
                 </div>
+                <p
+                  style={{
+                    marginTop: "12px",
+                    fontSize: "13px",
+                    lineHeight: "1.5",
+                    color: "#475569",
+                  }}
+                >
+                  ※ 힙 수치는 Chromium/Android 계열에서만 노출되는{" "}
+                  <code>performance.memory.usedJSHeapSize</code> 값을
+                  requestAnimationFrame 루프로 샘플링한 결과입니다. 다른
+                  브라우저에서는 값이 비어 있을 수 있습니다.
+                </p>
               </div>
               <div>
                 <h3 style={{ marginBottom: "8px", color: "#374151" }}>
