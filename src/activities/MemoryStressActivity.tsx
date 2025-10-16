@@ -270,16 +270,6 @@ const MemoryStressActivity: ActivityComponentType<
               <button type="button" onClick={() => pop()}>
                 Pop current screen
               </button>
-              <button
-                type="button"
-                onClick={cancelQueue}
-                disabled={!canCancelQueue}
-                style={{
-                  opacity: canCancelQueue ? 1 : 0.5,
-                }}
-              >
-                중단
-              </button>
             </div>
           </section>
 

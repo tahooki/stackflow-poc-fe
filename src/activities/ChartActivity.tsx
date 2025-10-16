@@ -201,19 +201,6 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
             <button type="button" onClick={() => pushCharts(100)}>
               100개 쌓기
             </button>
-            <button
-              type="button"
-              onClick={cancelQueue}
-              disabled={!canCancelQueue}
-              style={{
-                opacity: canCancelQueue ? 1 : 0.5,
-              }}
-            >
-              중단
-            </button>
-            <span style={{ fontWeight: 600 }}>
-              현재 Chart 스택: {chartStackCount.toLocaleString()}
-            </span>
           </div>
           {queueStatus ? (
             <p

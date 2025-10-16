@@ -93,16 +93,6 @@ const ImageStackActivity: ActivityComponentType<
             <button type="button" onClick={() => enqueuePushes(1000)}>
               1000개 쌓기
             </button>
-            <button
-              type="button"
-              onClick={cancelQueue}
-              disabled={!canCancelQueue}
-              style={{
-                opacity: canCancelQueue ? 1 : 0.5,
-              }}
-            >
-              중단
-            </button>
             <span style={{ fontWeight: 600 }}>
               현재 Image 스택: {stackCount.toLocaleString()}
             </span>
