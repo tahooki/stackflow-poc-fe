@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppScreen } from "@stackflow/plugin-basic-ui";
 import type { ActivityComponentType } from "@stackflow/react";
 import { useNavActions } from "../hooks/useNavActions";
+import { usePushQueue } from "../hooks/usePushQueue";
+import { useStackCount } from "../hooks/useStackCount";
 
 export type TextContentActivityParams = Record<string, never>;
 
@@ -183,11 +185,14 @@ const TextContentActivity: ActivityComponentType<
   TextContentActivityParams
 > = () => {
   const { push } = useNavActions();
-  const pendingPushCountRef = useRef(0);
-  const pushTimerRef = useRef<number | null>(null);
-  const [dispatchedCount, setDispatchedCount] = useState<number>(() =>
-    readStoredCount()
-  );
+  const { stackCount: textStackCount } = useStackCount({
+    activityName: "text",
+  });
+  const { queueStatus, enqueuePushes, cancelQueue, canCancelQueue } =
+    usePushQueue({
+      activityName: "text",
+    });
+  const [, setDispatchedCount] = useState<number>(() => readStoredCount());
   const { sections: articleSections, byteSize: articleByteSize } = useMemo(
     buildLargeArticle,
     []
@@ -199,17 +204,6 @@ const TextContentActivity: ActivityComponentType<
         0
       ),
     [articleSections]
-  );
-
-  useEffect(
-    () => () => {
-      if (pushTimerRef.current !== null) {
-        window.clearTimeout(pushTimerRef.current);
-      }
-      pushTimerRef.current = null;
-      pendingPushCountRef.current = 0;
-    },
-    []
   );
 
   const updateDispatchedCount = useCallback((increment: number) => {
@@ -240,37 +234,15 @@ const TextContentActivity: ActivityComponentType<
     };
   }, []);
 
-  const processNextPush = useCallback(() => {
-    if (pendingPushCountRef.current <= 0) {
-      pushTimerRef.current = null;
-      return;
-    }
-
-    pendingPushCountRef.current -= 1;
-    push("text", {});
-    updateDispatchedCount(1);
-
-    if (pendingPushCountRef.current <= 0) {
-      pushTimerRef.current = null;
-      return;
-    }
-
-    pushTimerRef.current = window.setTimeout(processNextPush, 100);
-  }, [push, updateDispatchedCount]);
-
   const pushCopies = useCallback(
     (count: number) => {
       if (count <= 0) {
         return;
       }
-
-      pendingPushCountRef.current += count;
-
-      if (pushTimerRef.current === null) {
-        processNextPush();
-      }
+      enqueuePushes(count);
+      updateDispatchedCount(count);
     },
-    [processNextPush]
+    [enqueuePushes, updateDispatchedCount]
   );
 
   return (
@@ -299,7 +271,7 @@ const TextContentActivity: ActivityComponentType<
               color: "#334155",
             }}
           >
-            현재 텍스트 스택 수: {dispatchedCount.toLocaleString()}
+            현재 텍스트 스택 수: {textStackCount.toLocaleString()}
           </p>
           <p
             style={{
@@ -332,7 +304,35 @@ const TextContentActivity: ActivityComponentType<
             <button type="button" onClick={() => pushCopies(1000)}>
               +1000 Stack
             </button>
+            <button
+              type="button"
+              onClick={cancelQueue}
+              disabled={!canCancelQueue}
+              style={{
+                opacity: canCancelQueue ? 1 : 0.5,
+              }}
+            >
+              중단
+            </button>
           </div>
+          {queueStatus ? (
+            <p
+              style={{
+                marginTop: 8,
+                color: "#475569",
+              }}
+            >
+              배치 {queueStatus.batchId} • 완료 {queueStatus.dispatched}/
+              {queueStatus.total}
+              {queueStatus.remaining > 0
+                ? ` • 대기 ${queueStatus.remaining}`
+                : queueStatus.canceled
+                ? " • 중단됨"
+                : queueStatus.completed
+                ? " • 완료됨"
+                : null}
+            </p>
+          ) : null}
         </section>
 
         <div className="activity__content">

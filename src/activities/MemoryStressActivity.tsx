@@ -3,6 +3,8 @@ import { AppScreen } from "@stackflow/plugin-basic-ui";
 import type { ActivityComponentType } from "@stackflow/react";
 
 import { useNavActions } from "../hooks/useNavActions";
+import { usePushQueue } from "../hooks/usePushQueue";
+import { useStackCount } from "../hooks/useStackCount";
 import {
   buildGraduallyMB,
   getHeavyPayloadStack,
@@ -36,6 +38,12 @@ const MemoryStressActivity: ActivityComponentType<
 > = (props: { params: MemoryStressActivityParams }) => {
   const { params } = props;
   const { push, pop } = useNavActions();
+  const { stackCount: memoryStackCount } = useStackCount({
+    activityName: "memory",
+  });
+  const { queueStatus, cancelQueue, canCancelQueue } = usePushQueue({
+    activityName: "memory",
+  });
   const [stackSnapshot, setStackSnapshot] = useState<HeavyPayload[]>(() => [
     ...getHeavyPayloadStack(),
   ]);
@@ -195,10 +203,29 @@ const MemoryStressActivity: ActivityComponentType<
             <h2>Stack Overview</h2>
             <ul>
               <li>Stack depth: {stackDepth}</li>
+              <li>Memory stack count: {memoryStackCount}</li>
               <li>Total stack payload: {stackSizeMB.toFixed(2)} MB</li>
               <li>Local extras (this screen): {localSizeMB.toFixed(2)} MB</li>
               <li>Heap usage (browser reported): {heapLabel}</li>
             </ul>
+            {queueStatus ? (
+              <p
+                style={{
+                  marginTop: 8,
+                  color: "#475569",
+                }}
+              >
+                배치 {queueStatus.batchId} • 완료 {queueStatus.dispatched}/
+                {queueStatus.total}
+                {queueStatus.remaining > 0
+                  ? ` • 대기 ${queueStatus.remaining}`
+                  : queueStatus.canceled
+                  ? " • 중단됨"
+                  : queueStatus.completed
+                  ? " • 완료됨"
+                  : null}
+              </p>
+            ) : null}
           </section>
 
           <section className="activity__card">
@@ -227,6 +254,16 @@ const MemoryStressActivity: ActivityComponentType<
               </button>
               <button type="button" onClick={() => pop()}>
                 Pop current screen
+              </button>
+              <button
+                type="button"
+                onClick={cancelQueue}
+                disabled={!canCancelQueue}
+                style={{
+                  opacity: canCancelQueue ? 1 : 0.5,
+                }}
+              >
+                중단
               </button>
             </div>
           </section>

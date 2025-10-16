@@ -1,67 +1,28 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { AppScreen } from "@stackflow/plugin-basic-ui";
-import { useStack } from "@stackflow/react";
 import type { ActivityComponentType } from "@stackflow/react";
 
 import { useNavActions } from "../hooks/useNavActions";
+import { usePushQueue } from "../hooks/usePushQueue";
+import { useStackCount } from "../hooks/useStackCount";
 
 export type ImageStackActivityParams = Record<string, never>;
 
 const IMAGE_PATHS = ["/images/3mg.jpg", "/images/5mg.jpg", "/images/7mg.jpg"];
 
 const IMAGE_COUNT_PER_ACTIVITY = 10;
-const PUSH_INTERVAL_MS = 100;
 
 const ImageStackActivity: ActivityComponentType<
   ImageStackActivityParams
 > = () => {
   const { push } = useNavActions();
-  const stack = useStack();
-
-  const pendingPushCountRef = useRef(0);
-  const pushTimerRef = useRef<number | null>(null);
-
-  useEffect(
-    () => () => {
-      if (pushTimerRef.current !== null) {
-        window.clearTimeout(pushTimerRef.current);
-      }
-      pushTimerRef.current = null;
-      pendingPushCountRef.current = 0;
-    },
-    []
-  );
-
-  const processNextPush = useCallback(() => {
-    if (pendingPushCountRef.current <= 0) {
-      pushTimerRef.current = null;
-      return;
-    }
-
-    pendingPushCountRef.current -= 1;
-    push("image-stack", {});
-
-    if (pendingPushCountRef.current <= 0) {
-      pushTimerRef.current = null;
-      return;
-    }
-
-    pushTimerRef.current = window.setTimeout(processNextPush, PUSH_INTERVAL_MS);
-  }, [push]);
-
-  const enqueuePushes = useCallback(
-    (count: number) => {
-      if (count <= 0) {
-        return;
-      }
-
-      pendingPushCountRef.current += count;
-      if (pushTimerRef.current === null) {
-        processNextPush();
-      }
-    },
-    [processNextPush]
-  );
+  const { stackCount } = useStackCount({
+    activityName: "image-stack",
+  });
+  const { queueStatus, enqueuePushes, cancelQueue, canCancelQueue } =
+    usePushQueue({
+      activityName: "image-stack",
+    });
 
   const imageSources = useMemo(
     () =>
@@ -71,16 +32,6 @@ const ImageStackActivity: ActivityComponentType<
         label: `Sample ${index + 1}`,
       })),
     []
-  );
-
-  const stackCount = useMemo(
-    () =>
-      stack.activities.reduce(
-        (count, activity) =>
-          activity.name === "image-stack" ? count + 1 : count,
-        0
-      ),
-    [stack.activities]
   );
 
   return (
@@ -126,10 +77,38 @@ const ImageStackActivity: ActivityComponentType<
             <button type="button" onClick={() => enqueuePushes(1000)}>
               1000개 쌓기
             </button>
+            <button
+              type="button"
+              onClick={cancelQueue}
+              disabled={!canCancelQueue}
+              style={{
+                opacity: canCancelQueue ? 1 : 0.5,
+              }}
+            >
+              중단
+            </button>
             <span style={{ fontWeight: 600 }}>
               현재 Image 스택: {stackCount.toLocaleString()}
             </span>
           </div>
+          {queueStatus ? (
+            <p
+              style={{
+                marginTop: 8,
+                color: "#475569",
+              }}
+            >
+              배치 {queueStatus.batchId} • 완료 {queueStatus.dispatched}/
+              {queueStatus.total}
+              {queueStatus.remaining > 0
+                ? ` • 대기 ${queueStatus.remaining}`
+                : queueStatus.canceled
+                ? " • 중단됨"
+                : queueStatus.completed
+                ? " • 완료됨"
+                : null}
+            </p>
+          ) : null}
         </section>
 
         <div className="activity__content">

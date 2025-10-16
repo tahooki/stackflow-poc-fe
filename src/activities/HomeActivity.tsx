@@ -8,15 +8,8 @@ export type HomeActivityParams = Record<string, never>;
 
 const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
   const { push } = useNavActions();
-
-  const clearLocalStorage = useCallback(() => {
-    localStorage.clear();
-  }, []);
-
   const handlerPush = useCallback(
     (activity: string) => {
-      clearLocalStorage();
-
       if (activity === "memory") {
         push(activity, {
           payloadMB: 5,
@@ -26,7 +19,7 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
         push(activity, {});
       }
     },
-    [push, clearLocalStorage]
+    [push]
   );
 
   return (
