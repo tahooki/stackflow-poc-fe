@@ -192,10 +192,9 @@ const TextContentActivity: ActivityComponentType<
   const { stackCount: textStackCount } = useStackCount({
     activityName: "text",
   });
-  const { queueStatus, enqueuePushes, cancelQueue, canCancelQueue } =
-    usePushQueue({
-      activityName: "text",
-    });
+  const { queueStatus, enqueuePushes } = usePushQueue({
+    activityName: "text",
+  });
 
   // 성능 데이터 기록
   useEffect(() => {

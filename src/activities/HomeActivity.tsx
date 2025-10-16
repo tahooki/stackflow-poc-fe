@@ -91,7 +91,7 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
                 marginBottom: 16,
               }}
             >
-              <h2>Performance Test Results</h2>
+              <h2>Peak Performance Data</h2>
               <button
                 type="button"
                 onClick={handleClearRecords}
@@ -219,14 +219,14 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
               </div>
             ) : (
               <p style={{ color: "#64748b", fontStyle: "italic" }}>
-                No performance records yet. Start testing activities to see
-                results here.
+                No performance data yet. Start testing activities to see peak
+                performance results here.
               </p>
             )}
           </section>
 
           <section className="activity__card">
-            <h2>Performance Statistics</h2>
+            <h2>Performance Statistics (Peak Data)</h2>
             <div
               style={{
                 display: "grid",
@@ -242,7 +242,7 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
                   <div>Average: {memoryStats.average.toFixed(1)} MB</div>
                   <div>Min: {memoryStats.min.toFixed(1)} MB</div>
                   <div>Max: {memoryStats.max.toFixed(1)} MB</div>
-                  <div>Records: {memoryStats.count}</div>
+                  <div>Activities: {memoryStats.count}</div>
                 </div>
               </div>
               <div>
@@ -253,7 +253,7 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
                   <div>Average: {stackStats.average.toFixed(1)}</div>
                   <div>Min: {stackStats.min}</div>
                   <div>Max: {stackStats.max}</div>
-                  <div>Records: {stackStats.count}</div>
+                  <div>Activities: {stackStats.count}</div>
                 </div>
               </div>
             </div>

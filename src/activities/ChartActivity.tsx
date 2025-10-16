@@ -50,10 +50,9 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
   const { stackCount: chartStackCount } = useStackCount({
     activityName: "chart",
   });
-  const { queueStatus, enqueuePushes, cancelQueue, canCancelQueue } =
-    usePushQueue({
-      activityName: "chart",
-    });
+  const { queueStatus, enqueuePushes } = usePushQueue({
+    activityName: "chart",
+  });
 
   // 성능 데이터 기록
   useEffect(() => {

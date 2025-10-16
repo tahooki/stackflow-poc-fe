@@ -45,7 +45,7 @@ const MemoryStressActivity: ActivityComponentType<
   const { stackCount: memoryStackCount } = useStackCount({
     activityName: "memory",
   });
-  const { queueStatus, cancelQueue, canCancelQueue } = usePushQueue({
+  const { queueStatus } = usePushQueue({
     activityName: "memory",
   });
 

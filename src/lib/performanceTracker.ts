@@ -10,9 +10,26 @@ export interface PerformanceRecord {
 const PERFORMANCE_STORAGE_KEY = "stackflow-performance-records";
 
 export const performanceTracker = {
-  // 성능 기록 저장
+  // 성능 기록 저장 (각 Activity별 최고 값만 유지)
   recordPerformance: (record: Omit<PerformanceRecord, "id" | "timestamp">) => {
     if (typeof window === "undefined") return;
+
+    const existingRecords = performanceTracker.getAllRecords();
+    const existingRecord = existingRecords.find(
+      (r) => r.activityName === record.activityName
+    );
+
+    // 기존 기록이 있고 새 값이 더 작으면 업데이트하지 않음
+    if (existingRecord) {
+      const isMemoryHigher =
+        record.memoryUsageMB > existingRecord.memoryUsageMB;
+      const isStackCountHigher = record.stackCount > existingRecord.stackCount;
+
+      // 메모리나 스택 카운트 중 하나라도 더 높을 때만 업데이트
+      if (!isMemoryHigher && !isStackCountHigher) {
+        return;
+      }
+    }
 
     const newRecord: PerformanceRecord = {
       id: `perf-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -20,8 +37,11 @@ export const performanceTracker = {
       ...record,
     };
 
-    const existingRecords = performanceTracker.getAllRecords();
-    const updatedRecords = [...existingRecords, newRecord];
+    // 같은 Activity의 기존 기록 제거하고 새 기록 추가
+    const filteredRecords = existingRecords.filter(
+      (r) => r.activityName !== record.activityName
+    );
+    const updatedRecords = [...filteredRecords, newRecord];
 
     window.localStorage.setItem(
       PERFORMANCE_STORAGE_KEY,

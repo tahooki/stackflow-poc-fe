@@ -24,10 +24,9 @@ const ImageStackActivity: ActivityComponentType<
   const { stackCount } = useStackCount({
     activityName: "image-stack",
   });
-  const { queueStatus, enqueuePushes, cancelQueue, canCancelQueue } =
-    usePushQueue({
-      activityName: "image-stack",
-    });
+  const { queueStatus, enqueuePushes } = usePushQueue({
+    activityName: "image-stack",
+  });
 
   // 성능 데이터 기록
   useEffect(() => {
