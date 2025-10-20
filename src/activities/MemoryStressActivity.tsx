@@ -15,7 +15,6 @@ import {
   type HeavyPayload,
 } from "../lib/memoryOverload";
 import { performanceTracker } from "../lib/performanceTracker";
-import { memoryUtils } from "../lib/memoryUtils";
 import { useStack } from "@stackflow/react";
 
 const BYTES_PER_MB = 1024 * 1024;
@@ -49,16 +48,6 @@ const MemoryStressActivity: ActivityComponentType<
     activityName: "memory",
   });
 
-  // 성능 데이터 기록
-  useEffect(() => {
-    const memoryUsageMB = memoryUtils.getCurrentMemoryUsage();
-    performanceTracker.recordPerformance({
-      activityName: "memory",
-      memoryUsageMB,
-      stackCount: memoryStackCount,
-      stackDepth: stack.activities.length,
-    });
-  }, [memoryStackCount, stack.activities.length]);
   const [stackSnapshot, setStackSnapshot] = useState<HeavyPayload[]>(() => [
     ...getHeavyPayloadStack(),
   ]);
@@ -133,6 +122,33 @@ const MemoryStressActivity: ActivityComponentType<
     () => localPayloads.reduce((acc, item) => acc + payloadSizeMB(item), 0),
     [localPayloads]
   );
+
+  // 성능 데이터 기록
+  useEffect(() => {
+    const dataMemoryMB = stackSizeMB + localSizeMB;
+
+    // 로컬스토리지에 저장
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        "memory-activity-memory",
+        JSON.stringify({
+          stackSizeMB,
+          localSizeMB,
+          totalMemoryMB: dataMemoryMB,
+          stackCount: memoryStackCount,
+          stackDepth: stack.activities.length,
+          timestamp: Date.now(),
+        })
+      );
+    }
+
+    performanceTracker.recordPerformance({
+      activityName: "memory",
+      memoryUsageMB: dataMemoryMB,
+      stackCount: memoryStackCount,
+      stackDepth: stack.activities.length,
+    });
+  }, [memoryStackCount, stack.activities.length, stackSizeMB, localSizeMB]);
 
   const handlePushAnother = useCallback(
     (size: number) => {

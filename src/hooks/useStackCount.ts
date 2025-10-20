@@ -7,6 +7,7 @@ export interface UseStackCountOptions {
 
 export interface UseStackCountReturn {
   stackCount: number;
+  stackDepth: number;
 }
 
 export const useStackCount = ({
@@ -14,15 +15,15 @@ export const useStackCount = ({
 }: UseStackCountOptions): UseStackCountReturn => {
   const stack = useStack();
 
-  // 컴포넌트 생성 시점의 스택 카운트를 고정하여 저장
   const stackCount = useMemo(
     () =>
       stack.activities.filter((activity) => activity.name === activityName)
         .length,
-    [] // 빈 의존성 배열로 생성 시점에만 계산
+    [activityName, stack.activities]
   );
 
   return {
     stackCount,
+    stackDepth: stack.activities.length,
   };
 };

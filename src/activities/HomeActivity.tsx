@@ -153,15 +153,6 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
                           textAlign: "right",
                         }}
                       >
-                        Stack Count
-                      </th>
-                      <th
-                        style={{
-                          padding: "8px",
-                          border: "1px solid #e2e8f0",
-                          textAlign: "right",
-                        }}
-                      >
                         Stack Depth
                       </th>
                     </tr>
@@ -203,15 +194,6 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
                         >
                           {record.stackCount}
                         </td>
-                        <td
-                          style={{
-                            padding: "8px",
-                            border: "1px solid #e2e8f0",
-                            textAlign: "right",
-                          }}
-                        >
-                          {record.stackDepth}
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -243,30 +225,6 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
                   <div>Min: {memoryStats.min.toFixed(1)} MB</div>
                   <div>Max: {memoryStats.max.toFixed(1)} MB</div>
                   <div>Activities: {memoryStats.count}</div>
-                </div>
-                <p
-                  style={{
-                    marginTop: "12px",
-                    fontSize: "13px",
-                    lineHeight: "1.5",
-                    color: "#475569",
-                  }}
-                >
-                  ※ 힙 수치는 Chromium/Android 계열에서만 노출되는{" "}
-                  <code>performance.memory.usedJSHeapSize</code> 값을
-                  requestAnimationFrame 루프로 샘플링한 결과입니다. 다른
-                  브라우저에서는 값이 비어 있을 수 있습니다.
-                </p>
-              </div>
-              <div>
-                <h3 style={{ marginBottom: "8px", color: "#374151" }}>
-                  Stack Count
-                </h3>
-                <div style={{ fontSize: "14px", lineHeight: "1.5" }}>
-                  <div>Average: {stackStats.average.toFixed(1)}</div>
-                  <div>Min: {stackStats.min}</div>
-                  <div>Max: {stackStats.max}</div>
-                  <div>Activities: {stackStats.count}</div>
                 </div>
               </div>
             </div>

@@ -6,13 +6,18 @@ import { useNavActions } from "../hooks/useNavActions";
 import { usePushQueue } from "../hooks/usePushQueue";
 import { useStackCount } from "../hooks/useStackCount";
 import { performanceTracker } from "../lib/performanceTracker";
-import { memoryUtils } from "../lib/memoryUtils";
-import { useStack } from "@stackflow/react";
 import { useEffect } from "react";
+import { formatBytes } from "../lib/dataSize";
 
 export type ImageStackActivityParams = Record<string, never>;
 
 const IMAGE_PATHS = ["/images/3mg.jpg", "/images/5mg.jpg", "/images/7mg.jpg"];
+const IMAGE_SIZE_BYTES: Record<string, number> = {
+  "/images/3mg.jpg": 3_348_824,
+  "/images/5mg.jpg": 5_358_412,
+  "/images/7mg.jpg": 7_216_767,
+};
+const SELECTED_IMAGE = IMAGE_PATHS[2];
 
 const IMAGE_COUNT_PER_ACTIVITY = 10;
 
@@ -20,34 +25,51 @@ const ImageStackActivity: ActivityComponentType<
   ImageStackActivityParams
 > = () => {
   const { push } = useNavActions();
-  const stack = useStack();
-  const { stackCount } = useStackCount({
+  const { stackCount, stackDepth } = useStackCount({
     activityName: "image-stack",
   });
   const { queueStatus, enqueuePushes } = usePushQueue({
     activityName: "image-stack",
   });
 
-  // 성능 데이터 기록
-  useEffect(() => {
-    const memoryUsageMB = memoryUtils.getCurrentMemoryUsage();
-    performanceTracker.recordPerformance({
-      activityName: "image-stack",
-      memoryUsageMB,
-      stackCount,
-      stackDepth: stack.activities.length,
-    });
-  }, [stackCount, stack.activities.length]);
-
   const imageSources = useMemo(
     () =>
       Array.from({ length: IMAGE_COUNT_PER_ACTIVITY }, (_, index) => ({
         id: `${index}`,
-        src: IMAGE_PATHS[2],
+        src: SELECTED_IMAGE,
         label: `Sample ${index + 1}`,
       })),
     []
   );
+  const imageBytesPerActivity = IMAGE_SIZE_BYTES[SELECTED_IMAGE] ?? 0;
+  const estimatedStackBytes = imageBytesPerActivity * stackCount;
+
+  // 성능 데이터 기록
+  useEffect(() => {
+    const dataMemoryMB = imageBytesPerActivity / (1024 * 1024);
+    const totalMemoryMB = estimatedStackBytes / (1024 * 1024);
+
+    // 로컬스토리지에 저장
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        "image-stack-activity-memory",
+        JSON.stringify({
+          dataMemoryMB,
+          totalMemoryMB,
+          stackCount,
+          stackDepth,
+          timestamp: Date.now(),
+        })
+      );
+    }
+
+    performanceTracker.recordPerformance({
+      activityName: "image-stack",
+      memoryUsageMB: totalMemoryMB,
+      stackCount,
+      stackDepth,
+    });
+  }, [stackCount, stackDepth, imageBytesPerActivity, estimatedStackBytes]);
 
   return (
     <AppScreen
@@ -67,6 +89,16 @@ const ImageStackActivity: ActivityComponentType<
           <p>
             Each activity renders {IMAGE_COUNT_PER_ACTIVITY} images from
             `/public/images`.
+          </p>
+          <p
+            style={{
+              marginTop: 8,
+              color: "#475569",
+            }}
+          >
+            활동당 이미지 용량: {formatBytes(imageBytesPerActivity)} · 이미지
+            활동 총 예상 용량: {formatBytes(estimatedStackBytes)} · 전체 스택
+            깊이: {stackDepth.toLocaleString()}
           </p>
           <div
             style={{

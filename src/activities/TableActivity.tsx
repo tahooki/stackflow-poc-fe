@@ -13,9 +13,8 @@ import { useStackCount } from "../hooks/useStackCount";
 import { createWaferDatasetCopy } from "../lib/waferDataset";
 import { ensureAgGridModules } from "../lib/agGridModules";
 import { performanceTracker } from "../lib/performanceTracker";
-import { memoryUtils } from "../lib/memoryUtils";
-import { useStack } from "@stackflow/react";
 import { useEffect } from "react";
+import { estimateJsonBytes, formatBytes } from "../lib/dataSize";
 
 export type TableActivityParams = Record<string, never>;
 
@@ -33,26 +32,47 @@ ensureAgGridModules();
 
 const TableActivity: ActivityComponentType<TableActivityParams> = () => {
   const { push } = useNavActions();
-  const stack = useStack();
   const recordCount = 1000;
-  const { stackCount: tableStackCount } = useStackCount({
+  const { stackCount: tableStackCount, stackDepth } = useStackCount({
     activityName: "table",
   });
   const { queueStatus, enqueuePushes } = usePushQueue({
     activityName: "table",
   });
 
+  const dataset = useMemo(
+    () => createWaferDatasetCopy(recordCount),
+    [recordCount]
+  );
+  const datasetBytes = useMemo(() => estimateJsonBytes(dataset), [dataset]);
+  const estimatedStackBytes = datasetBytes * tableStackCount;
+
   // 성능 데이터 기록
   useEffect(() => {
-    const memoryUsageMB = memoryUtils.getCurrentMemoryUsage();
+    const dataMemoryMB = datasetBytes / (1024 * 1024);
+    const totalMemoryMB = estimatedStackBytes / (1024 * 1024);
+
+    // 로컬스토리지에 저장
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        "table-activity-memory",
+        JSON.stringify({
+          dataMemoryMB,
+          totalMemoryMB,
+          stackCount: tableStackCount,
+          stackDepth,
+          timestamp: Date.now(),
+        })
+      );
+    }
+
     performanceTracker.recordPerformance({
       activityName: "table",
-      memoryUsageMB,
+      memoryUsageMB: totalMemoryMB,
       stackCount: tableStackCount,
-      stackDepth: stack.activities.length,
+      stackDepth,
     });
-  }, [tableStackCount, stack.activities.length]);
-  const dataset = useMemo(() => createWaferDatasetCopy(1000), [recordCount]);
+  }, [stackDepth, tableStackCount, datasetBytes, estimatedStackBytes]);
 
   const rowData = useMemo<WaferSummaryRow[]>(
     () =>
@@ -142,6 +162,16 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
           <h1>Wafer Dataset Table</h1>
           <p>
             {rowData.length.toLocaleString()} records loaded into this activity.
+          </p>
+          <p
+            style={{
+              marginTop: 8,
+              color: "#475569",
+            }}
+          >
+            데이터 용량: {formatBytes(datasetBytes)} · Table 활동 총 예상 용량:{" "}
+            {formatBytes(estimatedStackBytes)} · 전체 스택 깊이:{" "}
+            {stackDepth.toLocaleString()}
           </p>
           <div
             style={{

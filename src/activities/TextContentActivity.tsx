@@ -5,8 +5,7 @@ import { useNavActions } from "../hooks/useNavActions";
 import { usePushQueue } from "../hooks/usePushQueue";
 import { useStackCount } from "../hooks/useStackCount";
 import { performanceTracker } from "../lib/performanceTracker";
-import { memoryUtils } from "../lib/memoryUtils";
-import { useStack } from "@stackflow/react";
+import { formatBytes } from "../lib/dataSize";
 
 export type TextContentActivityParams = Record<string, never>;
 
@@ -110,16 +109,6 @@ const BASE_ARTICLE_SECTIONS: ReadonlyArray<{
   },
 ];
 
-const formatBytes = (value: number): string => {
-  if (value < 1024) {
-    return `${value.toLocaleString()} B`;
-  }
-  if (value < 1024 * 1024) {
-    return `${(value / 1024).toFixed(1)} KB`;
-  }
-  return `${(value / (1024 * 1024)).toFixed(2)} MB`;
-};
-
 const buildLargeArticle = (): GeneratedArticle => {
   const sections: ArticleSection[] = [];
   const encoder =
@@ -188,24 +177,13 @@ const TextContentActivity: ActivityComponentType<
   TextContentActivityParams
 > = () => {
   const { push } = useNavActions();
-  const stack = useStack();
-  const { stackCount: textStackCount } = useStackCount({
+  const { stackCount: textStackCount, stackDepth } = useStackCount({
     activityName: "text",
   });
   const { queueStatus, enqueuePushes } = usePushQueue({
     activityName: "text",
   });
 
-  // 성능 데이터 기록
-  useEffect(() => {
-    const memoryUsageMB = memoryUtils.getCurrentMemoryUsage();
-    performanceTracker.recordPerformance({
-      activityName: "text",
-      memoryUsageMB,
-      stackCount: textStackCount,
-      stackDepth: stack.activities.length,
-    });
-  }, [textStackCount, stack.activities.length]);
   const [, setDispatchedCount] = useState<number>(() => readStoredCount());
   const { sections: articleSections, byteSize: articleByteSize } = useMemo(
     buildLargeArticle,
@@ -219,6 +197,34 @@ const TextContentActivity: ActivityComponentType<
       ),
     [articleSections]
   );
+  const estimatedStackBytes = articleByteSize * textStackCount;
+
+  // 성능 데이터 기록
+  useEffect(() => {
+    const dataMemoryMB = articleByteSize / (1024 * 1024);
+    const totalMemoryMB = estimatedStackBytes / (1024 * 1024);
+
+    // 로컬스토리지에 저장
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        "text-activity-memory",
+        JSON.stringify({
+          dataMemoryMB,
+          totalMemoryMB,
+          stackCount: textStackCount,
+          stackDepth,
+          timestamp: Date.now(),
+        })
+      );
+    }
+
+    performanceTracker.recordPerformance({
+      activityName: "text",
+      memoryUsageMB: totalMemoryMB,
+      stackCount: textStackCount,
+      stackDepth,
+    });
+  }, [stackDepth, textStackCount, articleByteSize, estimatedStackBytes]);
 
   const updateDispatchedCount = useCallback((increment: number) => {
     if (increment === 0) {
@@ -296,6 +302,15 @@ const TextContentActivity: ActivityComponentType<
             대용량 기사 섹션: {articleSections.length.toLocaleString()}개 ·
             문단: {totalParagraphCount.toLocaleString()}개 · 예상 텍스트 용량:{" "}
             {formatBytes(articleByteSize)}
+          </p>
+          <p
+            style={{
+              marginTop: 8,
+              color: "#475569",
+            }}
+          >
+            전체 스택 깊이: {stackDepth.toLocaleString()} · 텍스트 활동 총 예상
+            용량: {formatBytes(estimatedStackBytes)}
           </p>
           <div
             style={{

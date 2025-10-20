@@ -6,10 +6,9 @@ import type { ActivityComponentType } from "@stackflow/react";
 import { useNavActions } from "../hooks/useNavActions";
 import { usePushQueue } from "../hooks/usePushQueue";
 import { useStackCount } from "../hooks/useStackCount";
-import { createWaferDatasetCopy } from "../lib/waferDataset";
+import { createWaferDatasetCopy, type WaferRecord } from "../lib/waferDataset";
 import { performanceTracker } from "../lib/performanceTracker";
-import { memoryUtils } from "../lib/memoryUtils";
-import { useStack } from "@stackflow/react";
+import { estimateJsonBytes, formatBytes } from "../lib/dataSize";
 
 export type ChartActivityParams = Record<string, never>;
 
@@ -23,10 +22,10 @@ const CHART_HEIGHT = 360;
 const MIN_WIDTH = 960;
 const PX_PER_POINT = 2;
 const MAX_CANVAS_WIDTH = 32000;
+const DATASET_LIMIT = 1000;
 
-const buildTimeline = (limit: number) => {
-  const dataset = createWaferDatasetCopy(limit);
-  return dataset
+const buildTimeline = (dataset: WaferRecord[]) =>
+  dataset
     .map((entry) => ({
       label: new Date(entry.timestamp).toLocaleTimeString([], {
         hour: "2-digit",
@@ -41,36 +40,58 @@ const buildTimeline = (limit: number) => {
           : null,
     }))
     .filter((point) => point.yieldValue !== null);
-};
 
 const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
   const { push } = useNavActions();
-  const stack = useStack();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const { stackCount: chartStackCount } = useStackCount({
+  const { stackCount: chartStackCount, stackDepth } = useStackCount({
     activityName: "chart",
   });
   const { queueStatus, enqueuePushes } = usePushQueue({
     activityName: "chart",
   });
 
+  const rawDataset = useMemo(() => createWaferDatasetCopy(DATASET_LIMIT), []);
+  const datasetBytes = useMemo(
+    () => estimateJsonBytes(rawDataset),
+    [rawDataset]
+  );
+  const estimatedStackBytes = datasetBytes * chartStackCount;
+
   // 성능 데이터 기록
   useEffect(() => {
-    const memoryUsageMB = memoryUtils.getCurrentMemoryUsage();
+    const dataMemoryMB = datasetBytes / (1024 * 1024);
+    const totalMemoryMB = estimatedStackBytes / (1024 * 1024);
+
+    // 로컬스토리지에 저장
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        "chart-activity-memory",
+        JSON.stringify({
+          dataMemoryMB,
+          totalMemoryMB,
+          stackCount: chartStackCount,
+          stackDepth,
+          timestamp: Date.now(),
+        })
+      );
+    }
+
     performanceTracker.recordPerformance({
       activityName: "chart",
-      memoryUsageMB,
+      memoryUsageMB: totalMemoryMB,
       stackCount: chartStackCount,
-      stackDepth: stack.activities.length,
+      stackDepth,
     });
-  }, [chartStackCount, stack.activities.length]);
+  }, [chartStackCount, stackDepth, datasetBytes, estimatedStackBytes]);
+  const timelineSource = useMemo(() => buildTimeline(rawDataset), [rawDataset]);
 
   const { timeline, sampleStep, sourceLength } = useMemo<{
     timeline: TimelinePoint[];
     sampleStep: number;
     sourceLength: number;
   }>(() => {
-    const raw = buildTimeline(1000);
+    const raw = timelineSource;
     if (raw.length === 0) {
       return { timeline: raw, sampleStep: 1, sourceLength: raw.length };
     }
@@ -84,7 +105,7 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
     const step = Math.ceil(raw.length / maxPoints);
     const sampled = raw.filter((_, index) => index % step === 0);
     return { timeline: sampled, sampleStep: step, sourceLength: raw.length };
-  }, []);
+  }, [timelineSource]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -178,6 +199,16 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
             {sourceLength.toLocaleString()} records selected · rendering{" "}
             {timeline.length.toLocaleString()} points
             {sampleStep > 1 ? ` (sampled every ${sampleStep} points).` : "."}
+          </p>
+          <p
+            style={{
+              marginTop: 8,
+              color: "#475569",
+            }}
+          >
+            데이터 용량: {formatBytes(datasetBytes)} · Chart 활동 총 예상 용량:{" "}
+            {formatBytes(estimatedStackBytes)} · 전체 스택 깊이:{" "}
+            {stackDepth.toLocaleString()}
           </p>
           <div
             style={{
