@@ -22,7 +22,7 @@ const CHART_HEIGHT = 360;
 const MIN_WIDTH = 960;
 const PX_PER_POINT = 2;
 const MAX_CANVAS_WIDTH = 32000;
-const DATASET_LIMIT = 1000;
+const DATASET_LIMIT = 2700; // ~1MB 데이터 (451KB/1200 * 2700 ≈ 1MB)
 
 const buildTimeline = (dataset: WaferRecord[]) =>
   dataset

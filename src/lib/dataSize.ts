@@ -28,12 +28,11 @@ export const estimateJsonBytes = (value: unknown): number => {
 const BYTE_UNITS = [
   { limit: 1024 ** 3, suffix: "GB" },
   { limit: 1024 ** 2, suffix: "MB" },
-  { limit: 1024, suffix: "KB" },
 ];
 
 export const formatBytes = (bytes: number): string => {
   if (!Number.isFinite(bytes) || bytes <= 0) {
-    return "0 B";
+    return "0 MB";
   }
 
   for (const { limit, suffix } of BYTE_UNITS) {
@@ -43,5 +42,10 @@ export const formatBytes = (bytes: number): string => {
     }
   }
 
-  return `${Math.round(bytes)} B`;
+  // 1MB 미만인 경우 MB로 표시
+  const mbValue = bytes / 1024 ** 2;
+  if (mbValue >= 0.95) {
+    return "1.00 MB";
+  }
+  return `${mbValue.toFixed(2)} MB`;
 };

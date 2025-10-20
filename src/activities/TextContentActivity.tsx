@@ -10,7 +10,7 @@ import { formatBytes } from "../lib/dataSize";
 export type TextContentActivityParams = Record<string, never>;
 
 const TEXT_DISPATCH_COUNT_KEY = "text-activity-dispatched-count";
-const TARGET_ARTICLE_BYTES = 512 * 1024;
+const TARGET_ARTICLE_BYTES = 1024 * 1024; // 1MB 데이터
 
 type ArticleSection = {
   id: string;

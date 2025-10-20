@@ -32,7 +32,7 @@ ensureAgGridModules();
 
 const TableActivity: ActivityComponentType<TableActivityParams> = () => {
   const { push } = useNavActions();
-  const recordCount = 1000;
+  const recordCount = 2700; // ~1MB 데이터 (451KB/1200 * 2700 ≈ 1MB)
   const { stackCount: tableStackCount, stackDepth } = useStackCount({
     activityName: "table",
   });

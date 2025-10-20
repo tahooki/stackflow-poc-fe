@@ -19,9 +19,6 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
   const [memoryStats, setMemoryStats] = useState(
     performanceTracker.getMemoryStats()
   );
-  const [stackStats, setStackStats] = useState(
-    performanceTracker.getStackStats()
-  );
 
   const handlerPush = useCallback(
     (activity: string) => {
@@ -41,7 +38,6 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
     const records = performanceTracker.getRecentRecords(100);
     setPerformanceRecords(records);
     setMemoryStats(performanceTracker.getMemoryStats());
-    setStackStats(performanceTracker.getStackStats());
   }, []);
 
   const handleClearRecords = useCallback(() => {
