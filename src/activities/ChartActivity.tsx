@@ -36,10 +36,10 @@ const CHART_MEASUREMENT_SNIPPET = String.raw`
 //     "estimated_yield_percentage": 98.5,
 //   },
 // }
-// 이 데이터를 2700개 복제해서 사용
+// 이 데이터를 1350개 복제해서 사용
 
 
-const rawDataset = useMemo(() => createWaferDatasetCopy(DATASET_LIMIT), []); // ~1MB 데이터 (451KB/1200 * 2700 ≈ 1MB)
+const rawDataset = useMemo(() => createWaferDatasetCopy(DATASET_LIMIT), []); // ~500KB 데이터 (451KB/1200 * 1350 ≈ 500KB)
 const datasetBytes = useMemo(
   () => estimateJsonBytes(rawDataset),
   [rawDataset]
@@ -70,7 +70,7 @@ const CHART_HEIGHT = 360;
 const MIN_WIDTH = 960;
 const PX_PER_POINT = 2;
 const MAX_CANVAS_WIDTH = 32000;
-const DATASET_LIMIT = 2700; // ~1MB 데이터 (451KB/1200 * 2700 ≈ 1MB)
+const DATASET_LIMIT = 1350; // ~500KB 데이터 (451KB/1200 * 1350 ≈ 500KB)
 
 const buildTimeline = (dataset: WaferRecord[]) =>
   dataset
