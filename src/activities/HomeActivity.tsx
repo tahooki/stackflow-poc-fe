@@ -7,7 +7,6 @@ import {
   performanceTracker,
   type PerformanceRecord,
 } from "../lib/performanceTracker";
-import { memoryUtils } from "../lib/memoryUtils";
 
 export type HomeActivityParams = Record<string, never>;
 
