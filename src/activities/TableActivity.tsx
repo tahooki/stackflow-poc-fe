@@ -30,6 +30,53 @@ type WaferSummaryRow = {
 
 ensureAgGridModules();
 
+const TABLE_MEASUREMENT_SNIPPET = String.raw`
+// JSON 데이터 
+// {
+//   "wafer_id": "WFR-001",
+//   "lot_id": "LOT-A1",
+//   "timestamp": "2025-09-25T10:00:00Z",
+//   "process_step": "Deposition",
+//   "equipment_id": "DEP-03",
+//   "parameters": {
+//     "temperature_celsius": 450,
+//     "pressure_pa": 120,
+//     "gas_flow_sccm": 500,
+//     "duration_seconds": 180,
+//   },
+//   "metrology": {
+//     "film_thickness_nm": 30.5,
+//     "uniformity_percentage": 99.2,
+//   },
+//   "defects": {
+//     "particle_count": 15,
+//     "defect_density": 0.021,
+//   },
+//   "yield": {
+//     "estimated_yield_percentage": 98.5,
+//   },
+// }
+// 이 데이터를 2700개 복제해서 사용
+
+const dataset = useMemo(
+  () => createWaferDatasetCopy(recordCount),
+  [recordCount]
+);
+const datasetBytes = useMemo(() => estimateJsonBytes(dataset), [dataset]);
+const estimatedStackBytes = datasetBytes * tableStackCount;
+
+useEffect(() => {
+  const dataMemoryMB = datasetBytes / (1024 * 1024);
+  const totalMemoryMB = estimatedStackBytes / (1024 * 1024);
+
+  performanceTracker.recordPerformance({
+    activityName: "table",
+    memoryUsageMB: totalMemoryMB,
+    stackDepth,
+  });
+}, [stackDepth, tableStackCount, datasetBytes, estimatedStackBytes]);
+`.trim();
+
 const TableActivity: ActivityComponentType<TableActivityParams> = () => {
   const { push } = useNavActions();
   const recordCount = 2700; // ~1MB 데이터 (451KB/1200 * 2700 ≈ 1MB)
@@ -232,6 +279,28 @@ const TableActivity: ActivityComponentType<TableActivityParams> = () => {
             </div>
           </section>
         </div>
+
+        <section className="activity__card" style={{ marginTop: 24 }}>
+          <h2>측정 데이터 코드 참고</h2>
+          <p>
+            Table 활동은 웨이퍼 레코드를 복제한 데이터셋의 바이트 크기를 계산한
+            뒤 전체 스택 수를 곱해 메모리 사용량을 추정합니다. 아래 코드는{" "}
+            <code>performanceTracker</code>로 이 값을 전달하는 흐름입니다.
+          </p>
+          <pre
+            style={{
+              backgroundColor: "#0f172a",
+              color: "#e2e8f0",
+              padding: 16,
+              borderRadius: 8,
+              fontSize: 13,
+              lineHeight: 1.5,
+              overflowX: "auto",
+            }}
+          >
+            <code>{TABLE_MEASUREMENT_SNIPPET}</code>
+          </pre>
+        </section>
       </div>
     </AppScreen>
   );

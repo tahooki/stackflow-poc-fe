@@ -35,6 +35,31 @@ const payloadSizeMB = (payload: HeavyPayload) => {
   return payload.buffer.byteLength / BYTES_PER_MB;
 };
 
+const MEMORY_MEASUREMENT_SNIPPET = String.raw`
+// 스택에 있는 모든 페이로드의 총 메모리 사용량 계산
+const stackSizeMB = useMemo(
+  () => stackSnapshot.reduce((acc, item) => acc + payloadSizeMB(item), 0),
+  [stackSnapshot]
+);
+
+// 현재 화면에서 로컬로 생성한 페이로드의 메모리 사용량 계산
+const localSizeMB = useMemo(
+  () => localPayloads.reduce((acc, item) => acc + payloadSizeMB(item), 0),
+  [localPayloads]
+);
+
+// 성능 추적을 위해 메모리 사용량 데이터를 기록
+useEffect(() => {
+  const dataMemoryMB = stackSizeMB + localSizeMB; // 총 메모리 사용량
+
+  performanceTracker.recordPerformance({
+    activityName: "memory",
+    memoryUsageMB: dataMemoryMB,
+    stackDepth,
+  });
+}, [stackDepth, stackSizeMB, localSizeMB]);
+`.trim();
+
 const MemoryStressActivity: ActivityComponentType<
   MemoryStressActivityParams
 > = (props: { params: MemoryStressActivityParams }) => {
@@ -322,6 +347,29 @@ const MemoryStressActivity: ActivityComponentType<
             </div>
           </section>
         </div>
+
+        <section className="activity__card" style={{ marginTop: 24 }}>
+          <h2>측정 데이터 코드 참고</h2>
+          <p>
+            Memory Stress 활동은 현재 스택에 저장된 페이로드와 화면이 추가로
+            보유한 로컬 페이로드 합계를 추적합니다. 아래 코드는{" "}
+            <code>performanceTracker</code>에 메모리 사용량을 전달하는 흐름을
+            요약합니다.
+          </p>
+          <pre
+            style={{
+              backgroundColor: "#0f172a",
+              color: "#e2e8f0",
+              padding: 16,
+              borderRadius: 8,
+              fontSize: 13,
+              lineHeight: 1.5,
+              overflowX: "auto",
+            }}
+          >
+            <code>{MEMORY_MEASUREMENT_SNIPPET}</code>
+          </pre>
+        </section>
       </div>
     </AppScreen>
   );

@@ -10,6 +10,54 @@ import { createWaferDatasetCopy, type WaferRecord } from "../lib/waferDataset";
 import { performanceTracker } from "../lib/performanceTracker";
 import { estimateJsonBytes, formatBytes } from "../lib/dataSize";
 
+const CHART_MEASUREMENT_SNIPPET = String.raw`
+// JSON 데이터 
+// {
+//   "wafer_id": "WFR-001",
+//   "lot_id": "LOT-A1",
+//   "timestamp": "2025-09-25T10:00:00Z",
+//   "process_step": "Deposition",
+//   "equipment_id": "DEP-03",
+//   "parameters": {
+//     "temperature_celsius": 450,
+//     "pressure_pa": 120,
+//     "gas_flow_sccm": 500,
+//     "duration_seconds": 180,
+//   },
+//   "metrology": {
+//     "film_thickness_nm": 30.5,
+//     "uniformity_percentage": 99.2,
+//   },
+//   "defects": {
+//     "particle_count": 15,
+//     "defect_density": 0.021,
+//   },
+//   "yield": {
+//     "estimated_yield_percentage": 98.5,
+//   },
+// }
+// 이 데이터를 2700개 복제해서 사용
+
+
+const rawDataset = useMemo(() => createWaferDatasetCopy(DATASET_LIMIT), []); // ~1MB 데이터 (451KB/1200 * 2700 ≈ 1MB)
+const datasetBytes = useMemo(
+  () => estimateJsonBytes(rawDataset),
+  [rawDataset]
+);
+const estimatedStackBytes = datasetBytes * chartStackCount;
+
+useEffect(() => {
+  const dataMemoryMB = datasetBytes / (1024 * 1024);
+  const totalMemoryMB = estimatedStackBytes / (1024 * 1024);
+
+  performanceTracker.recordPerformance({
+    activityName: "chart",
+    memoryUsageMB: totalMemoryMB,
+    stackDepth,
+  });
+}, [chartStackCount, stackDepth, datasetBytes, estimatedStackBytes]);
+`.trim();
+
 export type ChartActivityParams = Record<string, never>;
 
 type TimelinePoint = {
@@ -277,6 +325,28 @@ const ChartActivity: ActivityComponentType<ChartActivityParams> = () => {
             )}
           </section>
         </div>
+
+        <section className="activity__card" style={{ marginTop: 24 }}>
+          <h2>측정 데이터 코드 참고</h2>
+          <p>
+            Chart 활동은 웨이퍼 데이터셋 크기를 기반으로 스택에 쌓인 예상 메모리
+            용량을 기록합니다. 아래 코드는 로컬 메모리 계산과{" "}
+            <code>performanceTracker</code>로 전달하는 경로를 보여줍니다.
+          </p>
+          <pre
+            style={{
+              backgroundColor: "#0f172a",
+              color: "#e2e8f0",
+              padding: 16,
+              borderRadius: 8,
+              fontSize: 13,
+              lineHeight: 1.5,
+              overflowX: "auto",
+            }}
+          >
+            <code>{CHART_MEASUREMENT_SNIPPET}</code>
+          </pre>
+        </section>
       </div>
     </AppScreen>
   );

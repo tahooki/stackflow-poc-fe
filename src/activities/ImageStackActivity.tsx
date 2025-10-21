@@ -21,6 +21,33 @@ const SELECTED_IMAGE = IMAGE_PATHS[2];
 
 const IMAGE_COUNT_PER_ACTIVITY = 10;
 
+const IMAGE_MEASUREMENT_SNIPPET = String.raw`
+// 이미지 스택 활동은 선택한 이미지의 파일 크기와 스택 개수를 곱해 예상 메모리 사용량을 산출합니다.
+const imageSources = useMemo(
+  () =>
+    Array.from({ length: IMAGE_COUNT_PER_ACTIVITY }, (_, index) => ({
+      id: \`\${index}\`,
+      src: SELECTED_IMAGE,
+      label: \`Sample \${index + 1}\`,
+    })),
+  []
+);
+// 선택한 이미지의 파일 크기
+const imageBytesPerActivity = 7216767; // 7.21MB
+const estimatedStackBytes = imageBytesPerActivity * stackCount; // 7.21MB * 10 = 72.1MB
+
+useEffect(() => {
+  const dataMemoryMB = imageBytesPerActivity / (1024 * 1024); // 현재 화면에서 로컬로 생성한 이미지의 메모리 사용량
+  const totalMemoryMB = estimatedStackBytes / (1024 * 1024); // 스택에 있는 모든 이미지의 총 메모리 사용량
+
+  performanceTracker.recordPerformance({
+    activityName: "image-stack",
+    memoryUsageMB: totalMemoryMB,
+    stackDepth,
+  });
+}, [stackDepth, imageBytesPerActivity, estimatedStackBytes]);
+`.trim();
+
 const ImageStackActivity: ActivityComponentType<
   ImageStackActivityParams
 > = () => {
@@ -186,6 +213,28 @@ const ImageStackActivity: ActivityComponentType<
             </div>
           </section>
         </div>
+
+        <section className="activity__card" style={{ marginTop: 24 }}>
+          <h2>측정 데이터 코드 참고</h2>
+          <p>
+            Image Stack 활동은 선택한 이미지의 파일 크기와 스택 개수를 곱해 예상
+            메모리 사용량을 산출합니다. 아래 코드는 해당 계산과{" "}
+            <code>performanceTracker</code> 로그 기록 흐름을 발췌한 부분입니다.
+          </p>
+          <pre
+            style={{
+              backgroundColor: "#0f172a",
+              color: "#e2e8f0",
+              padding: 16,
+              borderRadius: 8,
+              fontSize: 13,
+              lineHeight: 1.5,
+              overflowX: "auto",
+            }}
+          >
+            <code>{IMAGE_MEASUREMENT_SNIPPET}</code>
+          </pre>
+        </section>
       </div>
     </AppScreen>
   );

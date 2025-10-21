@@ -224,32 +224,6 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = () => {
                 </div>
               </div>
             </div>
-            {memoryUtils.isMemoryAvailable() ? (
-              <div
-                style={{
-                  marginTop: "16px",
-                  padding: "8px",
-                  backgroundColor: "#f0f9ff",
-                  borderRadius: "4px",
-                  fontSize: "14px",
-                }}
-              >
-                ✅ Memory tracking is available (Chrome DevTools)
-              </div>
-            ) : (
-              <div
-                style={{
-                  marginTop: "16px",
-                  padding: "8px",
-                  backgroundColor: "#fef3c7",
-                  borderRadius: "4px",
-                  fontSize: "14px",
-                }}
-              >
-                ⚠️ Memory tracking not available (use Chrome for accurate
-                measurements)
-              </div>
-            )}
           </section>
         </div>
       </div>

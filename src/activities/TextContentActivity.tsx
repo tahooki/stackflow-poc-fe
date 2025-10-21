@@ -109,6 +109,28 @@ const BASE_ARTICLE_SECTIONS: ReadonlyArray<{
   },
 ];
 
+const TEXT_MEASUREMENT_SNIPPET = String.raw`
+// buildLargeArticle는 대용량 텍스트 기사 생성 함수로, 대용량 텍스트 기사를 생성하고 바이트 수를 리턴합니다.
+
+// 대용량 기사 생성 함수가 리턴한 바이트 수를 기반으로 스택별 예상 메모리 사용량을 계산
+const { sections: articleSections, byteSize: articleByteSize } = useMemo(
+  buildLargeArticle,
+  []
+);
+const estimatedStackBytes = articleByteSize * textStackCount; // 예상 메모리 사용량
+
+useEffect(() => {
+  const dataMemoryMB = articleByteSize / (1024 * 1024); // 예상 메모리 사용량
+  const totalMemoryMB = estimatedStackBytes / (1024 * 1024);
+
+  performanceTracker.recordPerformance({
+    activityName: "text",
+    memoryUsageMB: totalMemoryMB,
+    stackDepth,
+  });
+}, [stackDepth, articleByteSize, estimatedStackBytes]);
+`.trim();
+
 const buildLargeArticle = (): GeneratedArticle => {
   const sections: ArticleSection[] = [];
   const encoder =
@@ -426,6 +448,29 @@ const TextContentActivity: ActivityComponentType<
                 </section>
               ))}
             </article>
+          </section>
+
+          <section className="activity__card" style={{ marginTop: 24 }}>
+            <h2>측정 데이터 코드 참고</h2>
+            <p>
+              Text 활동은 대용량 기사 생성 함수가 리턴한 바이트 수를 기반으로
+              스택별 예상 메모리 사용량을 계산합니다. 아래 코드는{" "}
+              <code>performanceTracker</code>에 해당 지표를 기록하는 핵심
+              구간입니다.
+            </p>
+            <pre
+              style={{
+                backgroundColor: "#0f172a",
+                color: "#e2e8f0",
+                padding: 16,
+                borderRadius: 8,
+                fontSize: 13,
+                lineHeight: 1.5,
+                overflowX: "auto",
+              }}
+            >
+              <code>{TEXT_MEASUREMENT_SNIPPET}</code>
+            </pre>
           </section>
         </div>
       </div>
