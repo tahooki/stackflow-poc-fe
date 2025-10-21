@@ -12,33 +12,33 @@ const stackRoutes: StackRouteConfig[] = [
   {
     name: "home",
     activity: HomeActivity,
-    route: "/",
+    route: "/performance",
     initial: true,
   },
   {
     name: "table",
     activity: TableActivity,
-    route: "/table",
+    route: "/performance/table",
   },
   {
     name: "chart",
     activity: ChartActivity,
-    route: "/chart",
+    route: "/performance/chart",
   },
   {
     name: "image-stack",
     activity: ImageStackActivity,
-    route: "/images",
+    route: "/performance/images",
   },
   {
     name: "memory",
     activity: MemoryStressActivity,
-    route: "/memory",
+    route: "/performance/memory",
   },
   {
     name: "text",
     activity: TextContentActivity,
-    route: "/text",
+    route: "/performance/text",
   },
 ];
 

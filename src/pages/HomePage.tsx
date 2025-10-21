@@ -32,18 +32,6 @@ export const HomePage = () => {
               Coming Soon
             </span>
           </Link>
-
-          <Link to="/dx-kit" className="feature-card">
-            <div className="feature-icon">🛠️</div>
-            <h2>DX Kit</h2>
-            <p>
-              개발자 경험 향상을 위한 도구 모음. 디버깅, 로깅, 개발 도구 등을
-              제공합니다.
-            </p>
-            <span className="feature-badge feature-badge-pending">
-              Coming Soon
-            </span>
-          </Link>
         </div>
 
         <footer className="home-footer">
