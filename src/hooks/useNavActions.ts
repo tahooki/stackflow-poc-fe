@@ -21,6 +21,7 @@ export const useNavActions = () => {
   const actions = useFlow();
 
   return useMemo(() => {
+    // navFlag를 params에 주입하면서 animate 옵션은 기본 Stackflow push 옵션으로 전달한다.
     const pushWithFlag = ((
       activityName: ActivityName,
       params: ActivityParams,
@@ -43,6 +44,7 @@ export const useNavActions = () => {
       ...actions,
       push: pushWithFlag,
     };
+    // push 래퍼만 새로 만들어지므로 원본 액션 객체는 그대로 유지된다.
   }, [actions]);
 };
 

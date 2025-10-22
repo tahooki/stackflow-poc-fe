@@ -28,10 +28,13 @@ type Props = {
   fallbackActivity?: string;
 };
 
+// 하나의 Stackflow 인스턴스를 반복 사용해 렌더마다 초기화 비용을 줄인다.
 let appStack: ReturnType<typeof stackflow<ActivityRegistry>> | null = null;
 
+// 액티비티를 한 번만 등록하기 위한 레지스트리.
 const registeredActivities = new Set<string>();
 
+// 액티비티 이름을 명시적으로 지정하지 않은 경우 displayName 등에서 유추한다.
 const resolveActivityName = (config: StackRouteConfig) => {
   if (config.name) {
     return config.name;
@@ -58,6 +61,7 @@ const buildRouteMap = (configs: ReadonlyArray<StackRouteConfig>) =>
     return acc;
   }, {});
 
+// 최초 호출 시에만 Stackflow 인스턴스를 만들고, 기본 플러그인 구성을 적용한다.
 const ensureStackflowInstance = (
   configs: ReadonlyArray<StackRouteConfig>,
   fallbackActivity?: string
@@ -96,12 +100,14 @@ const ensureStackflowInstance = (
 
 export function NFXStack({ routes, fallbackActivity }: Props) {
   const stack = useMemo(
+    // routes 변화에 맞춰 Stackflow 인스턴스를 재평가하지만 실제 생성은 1회만 수행된다.
     () => ensureStackflowInstance(routes, fallbackActivity),
     [routes, fallbackActivity]
   );
   const { Stack, addActivity } = stack;
 
   useMemo(() => {
+    // 선언된 액티비티를 Stackflow에 등록하되 이미 등록된 이름은 건너뛴다.
     routes.forEach((config) => {
       const name = resolveActivityName(config);
       const component = config.activity;
