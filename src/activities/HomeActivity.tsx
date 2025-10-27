@@ -58,6 +58,16 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
             >
               Jump to Detail 99 (JUMP_TO_CLEAR_TOP)
             </button>
+            <button
+              type="button"
+              onClick={() =>
+                push('orders', undefined, {
+                  navFlag: { flag: 'SINGLE_TOP' },
+                })
+              }
+            >
+              Try AG Grid card view
+            </button>
           </div>
         </section>
 

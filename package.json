@@ -17,6 +17,8 @@
     "@stackflow/plugin-history-sync": "^1.7.1",
     "@stackflow/plugin-renderer-basic": "^1.1.13",
     "@stackflow/react": "^1.6.0",
+    "ag-grid-community": "^34.3.0",
+    "ag-grid-react": "^34.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
