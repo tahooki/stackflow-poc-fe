@@ -127,6 +127,7 @@ export function NFXStack({ routes, fallbackActivity }: Props) {
   return <Stack />;
 }
 
+// Stackflow의 전역 인스턴스에서 Flow 조작 API를 노출한다.
 export const useFlow = () => {
   if (!appStack) {
     throw new Error(
@@ -135,4 +136,17 @@ export const useFlow = () => {
   }
 
   return appStack.useFlow();
+};
+
+// 특정 액티비티 한정 Flow API를 캡슐화해 사용자가 타입 안전하게 접근하도록 돕는다.
+export const useStepFlow = <K extends Extract<keyof ActivityRegistry, string>>(
+  activityName: K
+) => {
+  if (!appStack) {
+    throw new Error(
+      "NFXStack has not been initialized yet. Render <NFXStack /> first."
+    );
+  }
+
+  return appStack.useStepFlow(activityName);
 };
