@@ -1,19 +1,23 @@
 import { AppScreen } from "@stackflow/plugin-basic-ui";
 import type { ActivityComponentType } from "@stackflow/react";
 import {
+  AllCommunityModule,
+  ModuleRegistry,
   type ColDef,
   type GridApi,
   type GridReadyEvent,
-  type ICellRendererParams,
-  ModuleRegistry,
-  AllCommunityModule,
 } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 import { AgGridReact } from "ag-grid-react";
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import "../assets/agGridActivity.css";
+import CardFieldRenderer from "../components/ag-grid/CardFieldRenderer";
+import {
+  createCardFieldBuilder,
+  type CardColumnDef,
+} from "../lib/agGridCardFields";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -38,72 +42,6 @@ const statusBadgeTone: Record<FulfillmentStatus, string> = {
   Delayed: "warning",
   Shipped: "success",
 };
-
-const CardRenderer = forwardRef<
-  unknown,
-  ICellRendererParams<OrderSummary, unknown>
->(({ data }: ICellRendererParams<OrderSummary, unknown>, ref) => {
-  const [expanded, setExpanded] = useState(false);
-
-  useImperativeHandle(ref, () => ({
-    refresh: () => false,
-  }));
-
-  if (!data) {
-    return null;
-  }
-
-  return (
-    <article className={`order-card${expanded ? " order-card--expanded" : ""}`}>
-      <header className="order-card__header">
-        <span className={`order-card__badge order-card__badge--${statusBadgeTone[data.status]}`}>
-          {data.status}
-        </span>
-        <div className="order-card__meta">
-          <h3 className="order-card__title">{data.customer}</h3>
-          <p className="order-card__summary">
-            Order {data.id} · ETA {data.eta}
-          </p>
-          {expanded ? (
-            <dl className="order-card__meta-list">
-              <div>
-                <dt>Items</dt>
-                <dd>{data.items}</dd>
-              </div>
-              <div>
-                <dt>Created</dt>
-                <dd>{data.createdAt}</dd>
-              </div>
-            </dl>
-          ) : null}
-        </div>
-        <button
-          className="order-card__toggle"
-          type="button"
-          onClick={() => setExpanded((prev) => !prev)}
-        >
-          {expanded ? "접기" : "펼치기"}
-        </button>
-      </header>
-      <section className="order-card__body">
-        {expanded ? (
-          <>
-            <p>
-              <strong>Total:</strong> ${data.total.toLocaleString()}
-            </p>
-            <p className="order-card__notes">{data.notes}</p>
-          </>
-        ) : (
-          <p className="order-card__notes order-card__notes--preview">
-            총액 ${data.total.toLocaleString()}
-          </p>
-        )}
-      </section>
-    </article>
-  );
-});
-
-CardRenderer.displayName = "CardRenderer";
 
 const buildDataset = (): OrderSummary[] => [
   {
@@ -175,43 +113,127 @@ const AgGridActivity: ActivityComponentType = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [gridApi, setGridApi] = useState<GridApi<OrderSummary> | null>(null);
   const rowData = useMemo(() => buildDataset(), []);
+  const baseColumnDefs = useMemo<CardColumnDef<OrderSummary>[]>(
+    () => [
+      {
+        headerName: "Customer",
+        field: "customer",
+        flex: 1,
+        minWidth: 180,
+        card: {
+          order: 0,
+        },
+      },
+      {
+        headerName: "Status",
+        field: "status",
+        width: 140,
+        card: {
+          order: 1,
+          render: ({ value }) => {
+            const status = (value as FulfillmentStatus) ?? "Pending";
+            const tone = statusBadgeTone[status] ?? "neutral";
+
+            return (
+              <span className={`order-card__badge order-card__badge--${tone}`}>
+                {status}
+              </span>
+            );
+          },
+        },
+      },
+      {
+        headerName: "Order #",
+        field: "id",
+        minWidth: 140,
+        pinned: "left",
+        card: {
+          label: "Order #",
+          order: 2,
+        },
+      },
+      {
+        headerName: "Items",
+        field: "items",
+        width: 110,
+        card: {
+          order: 3,
+        },
+      },
+      {
+        headerName: "Total (₩)",
+        field: "total",
+        flex: 0.6,
+        valueFormatter: ({ value }) =>
+          typeof value === "number" ? value.toLocaleString() : value,
+        card: {
+          label: "Total",
+          order: 4,
+          render: ({ formattedValue }) => `₩${String(formattedValue ?? "")}`,
+        },
+      },
+      {
+        headerName: "Created",
+        field: "createdAt",
+        width: 150,
+        card: {
+          label: "Created",
+          order: 5,
+        },
+      },
+      {
+        headerName: "ETA",
+        field: "eta",
+        width: 150,
+        card: {
+          label: "ETA",
+          order: 6,
+        },
+      },
+      {
+        headerName: "Notes",
+        field: "notes",
+        hide: true,
+        card: {
+          label: "Notes",
+          order: 7,
+          render: ({ value }) => (
+            <p className="order-card__notes">{String(value ?? "")}</p>
+          ),
+        },
+      },
+    ],
+    [],
+  );
+
+  const cardColumns = useMemo(
+    () => baseColumnDefs.filter((column) => column.card?.hidden !== true),
+    [baseColumnDefs],
+  );
+
+  const cardValueGetter = useMemo(
+    () => createCardFieldBuilder(cardColumns),
+    [cardColumns],
+  );
 
   const columnDefs = useMemo<ColDef<OrderSummary>[]>(
     () =>
       viewMode === "table"
-        ? [
-            {
-              headerName: "Order #",
-              field: "id",
-              minWidth: 140,
-              pinned: "left",
-            },
-            { headerName: "Customer", field: "customer", flex: 1, minWidth: 180 },
-            { headerName: "Items", field: "items", width: 110 },
-            {
-              headerName: "Total (₩)",
-              field: "total",
-              flex: 0.6,
-              valueFormatter: ({ value }) =>
-                typeof value === "number" ? value.toLocaleString() : value,
-            },
-            { headerName: "Status", field: "status", width: 140 },
-            { headerName: "Created", field: "createdAt", width: 150 },
-            { headerName: "ETA", field: "eta", width: 150 },
-          ]
+        ? baseColumnDefs
         : [
             {
               headerName: "",
-              field: "customer",
+              colId: "__card",
               flex: 1,
               autoHeight: true,
-              cellRenderer: CardRenderer,
+              valueGetter: cardValueGetter,
+              cellRenderer: CardFieldRenderer,
               suppressHeaderMenuButton: true,
               suppressHeaderFilterButton: true,
               suppressMovable: true,
             },
           ],
-    [viewMode],
+    [baseColumnDefs, cardValueGetter, viewMode],
   );
 
   useEffect(() => {
