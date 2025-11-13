@@ -2,8 +2,8 @@ import "@stackflow/plugin-basic-ui/index.css";
 import "./App.css";
 
 import DetailActivity from "./activities/DetailActivity";
-import AgGridActivity from "./activities/AgGridActivity";
 import HomeActivity from "./activities/HomeActivity";
+import SnapshotActivity from "./activities/SnapshotActivity";
 import { NFXStack, type StackRouteConfig } from "./lib/NFXStack";
 
 const stackRoutes: StackRouteConfig[] = [
@@ -21,10 +21,10 @@ const stackRoutes: StackRouteConfig[] = [
     },
   },
   {
-    name: "orders",
-    activity: AgGridActivity,
+    name: "snapshot",
+    activity: SnapshotActivity,
     route: {
-      path: "/orders",
+      path: "/snapshot",
     },
   },
 ];
