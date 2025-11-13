@@ -23,8 +23,10 @@ const CardFieldRendererInner = <TData,>(
       <dl className="order-card__list">
         {value.map((field) => (
           <div key={field.key} className="order-card__list-row">
-            <dt>{field.label}</dt>
-            <dd>{field.content}</dd>
+            {field.label ? <dt>{field.label}</dt> : null}
+            <dd className={field.label ? "" : "order-card__list-row--full"}>
+              {field.content}
+            </dd>
           </div>
         ))}
       </dl>

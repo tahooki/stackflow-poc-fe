@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 
 export type CardField<TData> = {
   key: string;
-  label: string;
+  label?: string;
   content: ReactNode;
 };
 
@@ -24,6 +24,8 @@ export type CardColumnConfig<TData> = {
   label?: string;
   order?: number;
   render?: (context: CardFieldRenderContext<TData>) => ReactNode;
+  spans?: number;
+  hideLabel?: boolean;
 };
 
 export type CardColumnDef<TData> = ColDef<TData> & {
@@ -110,7 +112,7 @@ export const createCardFieldBuilder = <TData,>(
           data,
           value: rawValue,
           formattedValue,
-          label,
+          label: column.card?.hideLabel ? undefined : label,
           column,
         };
 
