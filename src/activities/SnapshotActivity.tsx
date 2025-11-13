@@ -5,7 +5,13 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import "../assets/snapshotActivity.css";
 
-type CaptureStatus = "idle" | "capturing" | "copied" | "downloaded" | "error";
+type CaptureStatus =
+  | "idle"
+  | "capturing"
+  | "copied"
+  | "downloaded"
+  | "shared"
+  | "error";
 
 const labMetricSource = [
   { label: "Stack Depth", value: "07 activities" },
@@ -112,6 +118,8 @@ const buildStatusCopy = (status: CaptureStatus, errorMessage?: string | null) =>
       return "Screenshot copied to clipboard. Paste it anywhere!";
     case "downloaded":
       return "Clipboard API unavailable—PNG downloaded instead.";
+    case "shared":
+      return "Shared via your device’s navigation menu.";
     case "error":
       return `Capture failed: ${errorMessage ?? "unknown issue"}.`;
     default:
@@ -154,80 +162,94 @@ const SnapshotActivity: ActivityComponentType = () => {
     });
   }, []);
 
-  const captureScene = useCallback(async () => {
+  const isShareAvailable = useMemo(
+    () =>
+      typeof navigator !== "undefined" &&
+      typeof navigator.share === "function" &&
+      typeof window !== "undefined",
+    [],
+  );
+
+  const captureSceneBlob = useCallback(async (): Promise<Blob> => {
     const contentEl = contentRef.current;
     if (!contentEl) {
-      return;
+      throw new Error("Snapshot content is not mounted.");
     }
 
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    const fullCanvas = await toCanvas(contentEl, {
+      pixelRatio,
+      cacheBust: true,
+    });
+
+    const contentRect = contentEl.getBoundingClientRect();
+    const viewportWidth =
+      window.innerWidth ||
+      document.documentElement.clientWidth ||
+      contentRect.width;
+    const viewportHeight =
+      window.innerHeight ||
+      document.documentElement.clientHeight ||
+      contentRect.height;
+    const viewportRight = viewportWidth;
+    const viewportBottom = viewportHeight;
+
+    const visibleLeft = Math.max(0, -contentRect.left);
+    const visibleTop = Math.max(0, -contentRect.top);
+    const visibleRight = Math.min(
+      contentRect.width,
+      viewportRight - contentRect.left
+    );
+    const visibleBottom = Math.min(
+      contentRect.height,
+      viewportBottom - contentRect.top
+    );
+
+    const visibleWidth = Math.max(0, visibleRight - visibleLeft);
+    const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+
+    if (visibleWidth === 0 || visibleHeight === 0) {
+      throw new Error("Snapshot surface is outside the viewport.");
+    }
+
+    const cropCanvas = document.createElement("canvas");
+    cropCanvas.width = visibleWidth * pixelRatio;
+    cropCanvas.height = visibleHeight * pixelRatio;
+
+    const context = cropCanvas.getContext("2d");
+    if (!context) {
+      throw new Error("Unable to initialize canvas context.");
+    }
+
+    context.drawImage(
+      fullCanvas,
+      visibleLeft * pixelRatio,
+      visibleTop * pixelRatio,
+      visibleWidth * pixelRatio,
+      visibleHeight * pixelRatio,
+      0,
+      0,
+      cropCanvas.width,
+      cropCanvas.height
+    );
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      cropCanvas.toBlob((canvasBlob) => resolve(canvasBlob), "image/png", 0.95)
+    );
+
+    if (!blob) {
+      throw new Error("Renderer did not return image data.");
+    }
+
+    return blob;
+  }, []);
+
+  const captureScene = useCallback(async () => {
     setStatus("capturing");
     setError(null);
 
     try {
-      const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-      const fullCanvas = await toCanvas(contentEl, {
-        pixelRatio,
-        cacheBust: true,
-      });
-
-      const contentRect = contentEl.getBoundingClientRect();
-      const viewportWidth =
-        window.innerWidth ||
-        document.documentElement.clientWidth ||
-        contentRect.width;
-      const viewportHeight =
-        window.innerHeight ||
-        document.documentElement.clientHeight ||
-        contentRect.height;
-      const viewportRight = viewportWidth;
-      const viewportBottom = viewportHeight;
-
-      const visibleLeft = Math.max(0, -contentRect.left);
-      const visibleTop = Math.max(0, -contentRect.top);
-      const visibleRight = Math.min(
-        contentRect.width,
-        viewportRight - contentRect.left
-      );
-      const visibleBottom = Math.min(
-        contentRect.height,
-        viewportBottom - contentRect.top
-      );
-
-      const visibleWidth = Math.max(0, visibleRight - visibleLeft);
-      const visibleHeight = Math.max(0, visibleBottom - visibleTop);
-
-      if (visibleWidth === 0 || visibleHeight === 0) {
-        throw new Error("Snapshot surface is outside the viewport.");
-      }
-
-      const cropCanvas = document.createElement("canvas");
-      cropCanvas.width = visibleWidth * pixelRatio;
-      cropCanvas.height = visibleHeight * pixelRatio;
-
-      const context = cropCanvas.getContext("2d");
-      if (!context) {
-        throw new Error("Unable to initialize canvas context.");
-      }
-
-      context.drawImage(
-        fullCanvas,
-        visibleLeft * pixelRatio,
-        visibleTop * pixelRatio,
-        visibleWidth * pixelRatio,
-        visibleHeight * pixelRatio,
-        0,
-        0,
-        cropCanvas.width,
-        cropCanvas.height
-      );
-
-      const blob = await new Promise<Blob | null>((resolve) =>
-        cropCanvas.toBlob((canvasBlob) => resolve(canvasBlob), "image/png", 0.95)
-      );
-
-      if (!blob) {
-        throw new Error("Renderer did not return image data.");
-      }
+      const blob = await captureSceneBlob();
 
       const clipboardSupported =
         typeof navigator !== "undefined" &&
@@ -257,11 +279,57 @@ const SnapshotActivity: ActivityComponentType = () => {
           : "Unexpected capture error."
       );
     }
-  }, []);
+  }, [captureSceneBlob]);
+
+  const shareScene = useCallback(async () => {
+    if (!isShareAvailable) {
+      setStatus("error");
+      setError("Navigation share API is unavailable.");
+      return;
+    }
+
+    setStatus("capturing");
+    setError(null);
+
+    try {
+      const blob = await captureSceneBlob();
+      const snapshotFile = new File(
+        [blob],
+        `stackflow-snapshot-${Date.now()}.png`,
+        {
+          type: blob.type,
+        },
+      );
+      const shareFiles = [snapshotFile];
+      const shareData: ShareData = {
+        files: shareFiles,
+        title: "Stackflow Snapshot",
+        text: "Captured from the Stackflow Snapshot Studio",
+      };
+
+      if (
+        typeof navigator.canShare === "function" &&
+        !navigator.canShare({ files: shareFiles })
+      ) {
+        throw new Error("Share target does not support file payloads.");
+      }
+
+      await navigator.share(shareData);
+      setStatus("shared");
+    } catch (captureError) {
+      console.error(captureError);
+      setStatus("error");
+      setError(
+        captureError instanceof Error
+          ? captureError.message
+          : "Unexpected capture error."
+      );
+    }
+  }, [captureSceneBlob, isShareAvailable]);
 
   const statusCopy = buildStatusCopy(status, error);
   const statusClass =
-    status === "copied"
+    status === "copied" || status === "shared"
       ? "snapshot-controls__status--success"
       : status === "error"
       ? "snapshot-controls__status--error"
@@ -299,6 +367,15 @@ const SnapshotActivity: ActivityComponentType = () => {
               >
                 {captureLabel}
               </button>
+              {isShareAvailable && (
+                <button
+                  type="button"
+                  onClick={shareScene}
+                  disabled={status === "capturing"}
+                >
+                  Share snapshot
+                </button>
+              )}
               <button type="button" onClick={() => scrollViewport("top")}>
                 Scroll to top
               </button>
