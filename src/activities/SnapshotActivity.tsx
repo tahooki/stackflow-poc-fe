@@ -42,7 +42,8 @@ const useLogEntries = () =>
           second: "2-digit",
         })
         .replace(/^24:/, "00:");
-      const stage = index % 3 === 0 ? "Renderer" : index % 2 === 0 ? "Stack" : "Measure";
+      const stage =
+        index % 3 === 0 ? "Renderer" : index % 2 === 0 ? "Stack" : "Measure";
       return {
         id: `log-${index}`,
         timestamp,
@@ -80,11 +81,7 @@ const useGridCards = () =>
         title: "Horizontal stress rail",
         description:
           "Cards intentionally overflow to trigger inertia scrolling and compositing.",
-        bullets: [
-          "GPU-friendly gradients",
-          "Fixed min widths",
-          "Edge fading",
-        ],
+        bullets: ["GPU-friendly gradients", "Fixed min widths", "Edge fading"],
       },
       {
         title: "Snapshot service",
@@ -110,7 +107,10 @@ const useChartData = () =>
     []
   );
 
-const buildStatusCopy = (status: CaptureStatus, errorMessage?: string | null) => {
+const buildStatusCopy = (
+  status: CaptureStatus,
+  errorMessage?: string | null
+) => {
   switch (status) {
     case "capturing":
       return "Capturing canvas… hold tight.";
@@ -167,7 +167,7 @@ const SnapshotActivity: ActivityComponentType = () => {
       typeof navigator !== "undefined" &&
       typeof navigator.share === "function" &&
       typeof window !== "undefined",
-    [],
+    []
   );
 
   const captureSceneBlob = useCallback(async (): Promise<Blob> => {
@@ -298,7 +298,7 @@ const SnapshotActivity: ActivityComponentType = () => {
         `stackflow-snapshot-${Date.now()}.png`,
         {
           type: blob.type,
-        },
+        }
       );
       const shareFiles = [snapshotFile];
       const shareData: ShareData = {
@@ -334,7 +334,8 @@ const SnapshotActivity: ActivityComponentType = () => {
       : status === "error"
       ? "snapshot-controls__status--error"
       : undefined;
-  const captureLabel = status === "capturing" ? "Rendering…" : "Capture current view";
+  const captureLabel =
+    status === "capturing" ? "Rendering…" : "Capture current view";
 
   return (
     <AppScreen appBar={{ title: "Screenshot Lab" }}>
@@ -379,10 +380,7 @@ const SnapshotActivity: ActivityComponentType = () => {
               <button type="button" onClick={() => scrollViewport("top")}>
                 Scroll to top
               </button>
-              <button
-                type="button"
-                onClick={() => scrollViewport("bottom")}
-              >
+              <button type="button" onClick={() => scrollViewport("bottom")}>
                 Scroll to bottom
               </button>
             </div>
@@ -454,7 +452,7 @@ const SnapshotActivity: ActivityComponentType = () => {
       <button
         type="button"
         className="snapshot-floating-button"
-        onClick={captureScene}
+        onClick={shareScene}
         disabled={status === "capturing"}
       >
         {captureLabel}
