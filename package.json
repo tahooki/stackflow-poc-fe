@@ -19,7 +19,7 @@
     "@stackflow/react": "^1.6.0",
     "ag-grid-community": "^34.3.0",
     "ag-grid-react": "^34.3.0",
-    "html-to-image": "^1.11.13",
+    "dom-to-image-more": "^3.7.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

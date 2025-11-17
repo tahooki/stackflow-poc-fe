@@ -1,9 +1,9 @@
 import { AppScreen } from "@stackflow/plugin-basic-ui";
 import type { ActivityComponentType } from "@stackflow/react";
-import { toCanvas } from "html-to-image";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import "../assets/snapshotActivity.css";
+import { captureVisible } from "../lib/domCapture";
 
 type CaptureStatus =
   | "idle"
@@ -86,7 +86,7 @@ const useGridCards = () =>
       {
         title: "Snapshot service",
         description:
-          "Captures whatever is visible through html-to-image and ships it to the clipboard.",
+          "Captures whatever is visible through dom-to-image-more and ships it to the clipboard.",
         bullets: [
           "ClipboardItem fallback",
           "Pixel ratio scaling",
@@ -127,9 +127,36 @@ const buildStatusCopy = (
   }
 };
 
+const dataUrlToBlob = (dataUrl: string): Blob => {
+  const [metadata, base64] = dataUrl.split(",");
+  if (!metadata || !base64) {
+    throw new Error("Invalid capture output.");
+  }
+
+  const mimeMatch = metadata.match(/data:(.*?);base64/);
+  const mimeType = mimeMatch?.[1] ?? "image/png";
+  const decoder =
+    typeof window !== "undefined" && typeof window.atob === "function"
+      ? window.atob.bind(window)
+      : typeof atob === "function"
+      ? atob
+      : null;
+
+  if (!decoder) {
+    throw new Error("Base64 decoding is unavailable in this environment.");
+  }
+
+  const binary = decoder(base64);
+  const buffer = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    buffer[index] = binary.charCodeAt(index);
+  }
+
+  return new Blob([buffer], { type: mimeType });
+};
+
 const SnapshotActivity: ActivityComponentType = () => {
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const contentRef = useRef<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<CaptureStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const logEntries = useLogEntries();
@@ -171,77 +198,13 @@ const SnapshotActivity: ActivityComponentType = () => {
   );
 
   const captureSceneBlob = useCallback(async (): Promise<Blob> => {
-    const contentEl = contentRef.current;
-    if (!contentEl) {
-      throw new Error("Snapshot content is not mounted.");
+    const viewportEl = viewportRef.current;
+    if (!viewportEl) {
+      throw new Error("Snapshot viewport is not mounted.");
     }
 
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-    const fullCanvas = await toCanvas(contentEl, {
-      pixelRatio,
-      cacheBust: true,
-    });
-
-    const contentRect = contentEl.getBoundingClientRect();
-    const viewportWidth =
-      window.innerWidth ||
-      document.documentElement.clientWidth ||
-      contentRect.width;
-    const viewportHeight =
-      window.innerHeight ||
-      document.documentElement.clientHeight ||
-      contentRect.height;
-    const viewportRight = viewportWidth;
-    const viewportBottom = viewportHeight;
-
-    const visibleLeft = Math.max(0, -contentRect.left);
-    const visibleTop = Math.max(0, -contentRect.top);
-    const visibleRight = Math.min(
-      contentRect.width,
-      viewportRight - contentRect.left
-    );
-    const visibleBottom = Math.min(
-      contentRect.height,
-      viewportBottom - contentRect.top
-    );
-
-    const visibleWidth = Math.max(0, visibleRight - visibleLeft);
-    const visibleHeight = Math.max(0, visibleBottom - visibleTop);
-
-    if (visibleWidth === 0 || visibleHeight === 0) {
-      throw new Error("Snapshot surface is outside the viewport.");
-    }
-
-    const cropCanvas = document.createElement("canvas");
-    cropCanvas.width = visibleWidth * pixelRatio;
-    cropCanvas.height = visibleHeight * pixelRatio;
-
-    const context = cropCanvas.getContext("2d");
-    if (!context) {
-      throw new Error("Unable to initialize canvas context.");
-    }
-
-    context.drawImage(
-      fullCanvas,
-      visibleLeft * pixelRatio,
-      visibleTop * pixelRatio,
-      visibleWidth * pixelRatio,
-      visibleHeight * pixelRatio,
-      0,
-      0,
-      cropCanvas.width,
-      cropCanvas.height
-    );
-
-    const blob = await new Promise<Blob | null>((resolve) =>
-      cropCanvas.toBlob((canvasBlob) => resolve(canvasBlob), "image/png", 0.95)
-    );
-
-    if (!blob) {
-      throw new Error("Renderer did not return image data.");
-    }
-
-    return blob;
+    const dataUrl = await captureVisible(viewportEl);
+    return dataUrlToBlob(dataUrl);
   }, []);
 
   const captureScene = useCallback(async () => {
@@ -340,7 +303,7 @@ const SnapshotActivity: ActivityComponentType = () => {
   return (
     <AppScreen appBar={{ title: "Screenshot Lab" }}>
       <div ref={viewportRef} className="snapshot-scroll-container">
-        <div ref={contentRef} className="snapshot-activity">
+        <div className="snapshot-activity">
           <section className="snapshot-hero">
             <div className="snapshot-hero__heading">
               <h1>Stackflow Snapshot Studio</h1>
