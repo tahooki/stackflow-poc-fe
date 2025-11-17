@@ -7,7 +7,7 @@ import type { RouteLike } from "@stackflow/plugin-history-sync";
 
 import { navFlagPlugin } from "../plugins/navFlagPlugin";
 
-type GenericActivity = ActivityComponentType<Record<string, unknown>>;
+type GenericActivity = ActivityComponentType<any>;
 export type ActivityRegistry = Record<string, GenericActivity>;
 type RouteRegistry = Record<string, RouteLike<GenericActivity>>;
 
