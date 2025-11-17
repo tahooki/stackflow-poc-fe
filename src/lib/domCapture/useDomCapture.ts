@@ -11,6 +11,7 @@ export interface UseDomCaptureResult {
   lastDataUrl: string | null;
 }
 
+// 특정 DOM ref를 캡처하는 React Hook. 호출부는 capture 함수를 눌러 data URL을 얻는다.
 export function useDomCapture<T extends HTMLElement>(
   rootRef: RefObject<T>,
   options?: DomToImageOptions

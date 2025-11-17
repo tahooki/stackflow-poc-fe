@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { useFlow } from '../lib/NFXStack';
+import { useFlow } from '../lib/nfxStackCore';
 import type { NavFlag } from '../plugins/navFlagPlugin';
 import { NAV_FLAG_INTERNAL_FIELD } from '../plugins/navFlagPlugin';
 

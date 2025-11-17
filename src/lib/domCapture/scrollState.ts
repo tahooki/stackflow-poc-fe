@@ -7,6 +7,7 @@ const DATA_SELECTOR = "[data-scroll-id]";
 
 type CloneRoot = Document | HTMLElement;
 
+// 루트 이하의 모든 스크롤 컨테이너에 식별자와 상태를 부여해 배열로 돌려준다.
 export function collectScrollStates(root: HTMLElement): ScrollInfo[] {
   const states: ScrollInfo[] = [];
   if (!root || typeof document === "undefined") {
@@ -24,6 +25,7 @@ export function collectScrollStates(root: HTMLElement): ScrollInfo[] {
   return states;
 }
 
+// captureVisible 종료 후 data-scroll-id 흔적을 모두 제거한다.
 export function cleanupScrollMarks(root: HTMLElement): void {
   if (!root) {
     return;
@@ -41,6 +43,7 @@ export function cleanupScrollMarks(root: HTMLElement): void {
   });
 }
 
+// 클론 DOM의 각 스크롤 컨테이너를 찾아 원래 스크롤 좌표를 다시 흘려 넣는다.
 export function applyScrollStates(
   cloneRoot: CloneRoot,
   states: ScrollInfo[]
@@ -56,6 +59,7 @@ export function applyScrollStates(
   });
 }
 
+// 스크롤 후보 요소를 발견하면 data-scroll-id를 부여하고 상태 스냅샷을 생성한다.
 function markIfScrollable(
   element: HTMLElement,
   states: ScrollInfo[]
@@ -84,6 +88,7 @@ function markIfScrollable(
   return true;
 }
 
+// overflow 속성과 scrollWidth/Height 차이를 함께 확인해 스크롤 컨테이너 여부를 판단한다.
 function isScrollable(element: HTMLElement): boolean {
   if (typeof window === "undefined" || typeof getComputedStyle === "undefined") {
     return false;
@@ -105,6 +110,7 @@ function isScrollable(element: HTMLElement): boolean {
   return hasHorizontalOverflow || hasVerticalOverflow || allowsHorizontal || allowsVertical;
 }
 
+// flex 레이아웃 등 핵심 스타일만 추려서 복제 가능한 스냅샷을 남긴다.
 function snapshotLayout(element: HTMLElement): ScrollLayoutSnapshot {
   if (typeof window === "undefined" || typeof getComputedStyle === "undefined") {
     return {};
@@ -124,6 +130,7 @@ function snapshotLayout(element: HTMLElement): ScrollLayoutSnapshot {
   };
 }
 
+// 클론 문서에서 동일한 data-scroll-id를 가진 요소를 찾는다.
 function findScrollableClone(
   root: CloneRoot,
   id: string

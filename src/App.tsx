@@ -4,7 +4,8 @@ import "./App.css";
 import DetailActivity from "./activities/DetailActivity";
 import HomeActivity from "./activities/HomeActivity";
 import SnapshotActivity from "./activities/SnapshotActivity";
-import { NFXStack, type StackRouteConfig } from "./lib/NFXStack";
+import { NFXStack } from "./lib/NFXStack";
+import type { StackRouteConfig } from "./lib/nfxStackCore";
 
 const stackRoutes: StackRouteConfig[] = [
   {

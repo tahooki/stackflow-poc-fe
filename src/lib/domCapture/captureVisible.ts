@@ -10,6 +10,7 @@ import type { ScrollInfo } from "./types";
 
 const SCROLLBAR_STYLE_ID = "dom-capture-hide-scrollbars";
 
+// 옵션에 scale이 명시되지 않았다면 디바이스 픽셀 비를 기반으로 기본값을 계산한다.
 function getDefaultScale(explicitScale?: number): number {
   if (typeof explicitScale === "number") {
     return explicitScale;
@@ -22,6 +23,7 @@ function getDefaultScale(explicitScale?: number): number {
   return Math.min(window.devicePixelRatio || 1, 2);
 }
 
+// 현재 뷰포트에 실제로 보이는 영역만 dom-to-image-more로 캡처해 PNG data URL을 돌려준다.
 export async function captureVisible(
   root: HTMLElement,
   options: DomToImageOptions = {}
@@ -81,6 +83,7 @@ export async function captureVisible(
   }
 }
 
+// crop 연산에 사용할 뷰포트 클립 범위.
 type ClipRect = {
   width: number;
   height: number;
@@ -88,6 +91,7 @@ type ClipRect = {
   y: number;
 };
 
+// 루트 요소가 자체 스크롤을 갖고 있는지, 아니면 윈도우 뷰포트 기준으로 잘라야 하는지 판별한다.
 function resolveVisibleClip(root: HTMLElement): ClipRect | null {
   const hasIntrinsicScroll =
     root.scrollWidth - root.clientWidth > 1 ||
@@ -139,6 +143,7 @@ function resolveVisibleClip(root: HTMLElement): ClipRect | null {
   };
 }
 
+// dom-to-image-more가 반환한 풀 캔버스를 뷰포트 크기만큼 잘라낸 새 캔버스를 만든다.
 function cropCanvas(
   canvas: HTMLCanvasElement,
   clip: ClipRect,
@@ -184,6 +189,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+// 클론 DOM의 스크롤 컨테이너에 overflow 마스크와 레이아웃 복제를 적용한다.
 function applyViewportMask(element: HTMLElement, state: ScrollInfo) {
   ensureScrollbarStyle(element.ownerDocument ?? null);
   element.classList.add("dom-capture-scroll-mask");
@@ -227,6 +233,7 @@ function applyViewportMask(element: HTMLElement, state: ScrollInfo) {
   element.appendChild(wrapper);
 }
 
+// snapshotLayout에서 캡처해 둔 CSS 속성을 래퍼에 복사한다.
 function applyLayoutSnapshot(target: HTMLElement, state: ScrollInfo) {
   const layout = state.layout;
   if (!layout) {
@@ -265,6 +272,7 @@ function applyLayoutSnapshot(target: HTMLElement, state: ScrollInfo) {
   }
 }
 
+// 캡처 전에 실제 DOM의 스크롤바도 숨겨 native overlay가 렌더되지 않도록 한다.
 function applyOriginalScrollbarMask(
   root: HTMLElement,
   states: ScrollInfo[]
@@ -292,6 +300,7 @@ function applyOriginalScrollbarMask(
   };
 }
 
+// 스크롤바를 가리는 공통 스타일을 문서에 한 번만 삽입한다.
 function ensureScrollbarStyle(doc: Document | null) {
   if (!doc) {
     return;
