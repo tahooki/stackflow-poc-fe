@@ -8,6 +8,8 @@ import {
 } from "./scrollState";
 import type { ScrollInfo } from "./types";
 
+const SCROLLBAR_STYLE_ID = "dom-capture-hide-scrollbars";
+
 function getDefaultScale(explicitScale?: number): number {
   if (typeof explicitScale === "number") {
     return explicitScale;
@@ -30,6 +32,7 @@ export async function captureVisible(
 
   const scrollStates = collectScrollStates(root);
   const scale = getDefaultScale(options.scale);
+  const restoreOriginalScrollbars = applyOriginalScrollbarMask(root, scrollStates);
 
   const scrollStateMap = new Map(scrollStates.map((state) => [state.id, state]));
   const userAdjustClonedNode = options.adjustClonedNode;
@@ -73,6 +76,7 @@ export async function captureVisible(
     const clippedCanvas = cropCanvas(fullCanvas, clipRect, scale);
     return clippedCanvas.toDataURL("image/png");
   } finally {
+    restoreOriginalScrollbars();
     cleanupScrollMarks(root);
   }
 }
@@ -181,6 +185,8 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 function applyViewportMask(element: HTMLElement, state: ScrollInfo) {
+  ensureScrollbarStyle(element.ownerDocument ?? null);
+  element.classList.add("dom-capture-scroll-mask");
   element.style.overflow = "hidden";
 
   if (state.width > 0) {
@@ -203,16 +209,7 @@ function applyViewportMask(element: HTMLElement, state: ScrollInfo) {
     wrapper.appendChild(element.firstChild);
   }
 
-  const view = element.ownerDocument?.defaultView;
-  if (view) {
-    const computed = view.getComputedStyle(element);
-    wrapper.style.display = computed.display;
-    wrapper.style.flexDirection = computed.flexDirection;
-    wrapper.style.flexWrap = computed.flexWrap;
-    wrapper.style.alignItems = computed.alignItems;
-    wrapper.style.justifyContent = computed.justifyContent;
-    wrapper.style.gap = computed.gap;
-  }
+  applyLayoutSnapshot(wrapper, state);
 
   const transforms: string[] = [];
   if (state.x) {
@@ -228,4 +225,94 @@ function applyViewportMask(element: HTMLElement, state: ScrollInfo) {
   }
 
   element.appendChild(wrapper);
+}
+
+function applyLayoutSnapshot(target: HTMLElement, state: ScrollInfo) {
+  const layout = state.layout;
+  if (!layout) {
+    return;
+  }
+
+  if (layout.display) {
+    target.style.display = layout.display;
+  }
+  if (layout.flexDirection) {
+    target.style.flexDirection = layout.flexDirection;
+  }
+  if (layout.flexWrap) {
+    target.style.flexWrap = layout.flexWrap;
+  }
+  if (layout.alignItems) {
+    target.style.alignItems = layout.alignItems;
+  }
+  if (layout.alignContent) {
+    target.style.alignContent = layout.alignContent;
+  }
+  if (layout.justifyContent) {
+    target.style.justifyContent = layout.justifyContent;
+  }
+  if (layout.gap) {
+    target.style.gap = layout.gap;
+  }
+  if (layout.rowGap) {
+    target.style.rowGap = layout.rowGap;
+  }
+  if (layout.columnGap) {
+    target.style.columnGap = layout.columnGap;
+  }
+  if (layout.whiteSpace) {
+    target.style.whiteSpace = layout.whiteSpace;
+  }
+}
+
+function applyOriginalScrollbarMask(
+  root: HTMLElement,
+  states: ScrollInfo[]
+): () => void {
+  const doc = root.ownerDocument ?? null;
+  ensureScrollbarStyle(doc);
+  const applied: HTMLElement[] = [];
+
+  states.forEach(({ id }) => {
+    const target =
+      (root.matches(`[data-scroll-id="${id}"]`)
+        ? (root as HTMLElement)
+        : root.querySelector<HTMLElement>(`[data-scroll-id="${id}"]`)) ?? null;
+
+    if (target && !applied.includes(target)) {
+      target.classList.add("dom-capture-scroll-mask");
+      applied.push(target);
+    }
+  });
+
+  return () => {
+    applied.forEach((element) => {
+      element.classList.remove("dom-capture-scroll-mask");
+    });
+  };
+}
+
+function ensureScrollbarStyle(doc: Document | null) {
+  if (!doc) {
+    return;
+  }
+
+  if (doc.getElementById(SCROLLBAR_STYLE_ID)) {
+    return;
+  }
+
+  const style = doc.createElement("style");
+  style.id = SCROLLBAR_STYLE_ID;
+  style.textContent = `
+    .dom-capture-scroll-mask {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    .dom-capture-scroll-mask::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+  `;
+  doc.head.appendChild(style);
 }

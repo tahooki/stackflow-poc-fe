@@ -1,4 +1,4 @@
-import type { ScrollInfo } from "./types";
+import type { ScrollInfo, ScrollLayoutSnapshot } from "./types";
 
 const SCROLLABLE_OVERFLOW = /(auto|scroll)/i;
 let scrollIdSeed = 0;
@@ -79,6 +79,7 @@ function markIfScrollable(
     height: element.clientHeight,
     contentWidth: element.scrollWidth,
     contentHeight: element.scrollHeight,
+    layout: snapshotLayout(element),
   });
   return true;
 }
@@ -102,6 +103,25 @@ function isScrollable(element: HTMLElement): boolean {
     allowsVertical && element.scrollHeight - element.clientHeight > 1;
 
   return hasHorizontalOverflow || hasVerticalOverflow || allowsHorizontal || allowsVertical;
+}
+
+function snapshotLayout(element: HTMLElement): ScrollLayoutSnapshot {
+  if (typeof window === "undefined" || typeof getComputedStyle === "undefined") {
+    return {};
+  }
+  const computed = getComputedStyle(element);
+  return {
+    display: computed.display,
+    flexDirection: computed.flexDirection,
+    flexWrap: computed.flexWrap,
+    alignItems: computed.alignItems,
+    alignContent: computed.alignContent,
+    justifyContent: computed.justifyContent,
+    gap: computed.gap,
+    rowGap: computed.rowGap,
+    columnGap: computed.columnGap,
+    whiteSpace: computed.whiteSpace,
+  };
 }
 
 function findScrollableClone(
