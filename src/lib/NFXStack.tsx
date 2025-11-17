@@ -11,11 +11,12 @@ import { navFlagPlugin } from "../plugins/navFlagPlugin";
 
 // ActivityComponentType 제네릭이 사실상 불공변이어서 공용 레지스트리는 `any`로 둬야 한다.
 // 액티비티를 선언하는 쪽에서 params 타입은 유지되지만, 내부 저장소는 모든 형태를 받아야 한다.
-type ActivityRegistry = Record<string, ActivityComponentType<any>>;
-type RouteRegistry = Record<string, RouteLike<ActivityComponentType<any>>>;
+type GenericActivity = ActivityComponentType<Record<string, unknown>>;
+type ActivityRegistry = Record<string, GenericActivity>;
+type RouteRegistry = Record<string, RouteLike<GenericActivity>>;
 
 export type StackRouteConfig<
-  TActivity extends ActivityComponentType<any> = ActivityComponentType<any>
+  TActivity extends GenericActivity = GenericActivity
 > = {
   name?: string;
   activity: TActivity;
