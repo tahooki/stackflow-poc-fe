@@ -3,6 +3,7 @@ import "./App.css";
 
 import DetailActivity from "./activities/DetailActivity";
 import HomeActivity from "./activities/HomeActivity";
+import OrdersActivity from "./activities/OrdersActivity";
 import SnapshotActivity from "./activities/SnapshotActivity";
 import { NFXStack } from "./lib/NFXStack";
 import type { StackRouteConfig } from "./lib/nfxStackCore";
@@ -19,6 +20,13 @@ const stackRoutes: StackRouteConfig[] = [
     activity: DetailActivity,
     route: {
       path: "/detail/:id",
+    },
+  },
+  {
+    name: "orders",
+    activity: OrdersActivity,
+    route: {
+      path: "/orders",
     },
   },
   {
