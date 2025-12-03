@@ -75,6 +75,7 @@ class LayerController {
 
   attach(actions: StackflowActions) {
     this.actions = actions;
+    console.log("[LayerController] attach actions");
     this.syncFromStack(actions.getStack());
   }
 
@@ -122,17 +123,31 @@ class LayerController {
       lastStackUpdateAt: Date.now(),
     };
 
+    console.log(
+      "[LayerController] syncFromStack",
+      `activities=${stack.activities.length}`,
+      `steps=${stepCount}`,
+      `modals=${modalFrames.length}`
+    );
+
     this.emit();
   }
 
   registerModalLayer(modal: ModalRegistration) {
     const openedAt =
-      modal.openedAt ?? this.modalRegistry.get(modal.id)?.openedAt ?? Date.now();
+      modal.openedAt ??
+      this.modalRegistry.get(modal.id)?.openedAt ??
+      Date.now();
 
     this.modalRegistry.set(modal.id, {
       ...modal,
       openedAt,
       kind: "modal",
+    });
+
+    console.log("[LayerController] registerModal", modal.id, {
+      activityId: modal.activityId,
+      persistAcrossActivities: modal.persistAcrossActivities,
     });
 
     if (this.lastStack) {
@@ -143,6 +158,7 @@ class LayerController {
   unregisterModalLayer(modalId: string) {
     if (this.modalRegistry.has(modalId)) {
       this.modalRegistry.delete(modalId);
+      console.log("[LayerController] unregisterModal", modalId);
       if (this.lastStack) {
         this.syncFromStack(this.lastStack);
       }
@@ -162,49 +178,82 @@ class LayerController {
     return this.state;
   }
 
-  async handleBackPress(
-    confirmExit?: () => boolean | Promise<boolean>
-  ): Promise<BackActionResult> {
+  async handleBackPress(): Promise<BackActionResult> {
     if (this.handlingBack) {
+      console.log("[LayerController] handleBackPress skipped (handling)");
       return { popped: "none" };
     }
 
     this.handlingBack = true;
     try {
+      console.log("[LayerController] handleBackPress start");
       const topModal = this.getTopModal();
       if (topModal) {
+        console.log("[LayerController] popping modal", topModal.id);
         this.unregisterModalLayer(topModal.id);
         topModal.onClose?.();
-        return { popped: "modal", targetId: topModal.id };
+        const result: BackActionResult = {
+          popped: "modal",
+          targetId: topModal.id,
+        };
+        console.log("[LayerController] back result", result);
+        return result;
       }
 
       const actions = this.actions;
       const stack = actions?.getStack() ?? this.lastStack;
 
       if (!actions || !stack) {
+        console.log("[LayerController] no actions/stack", {
+          hasActions: Boolean(actions),
+          hasStack: Boolean(stack),
+        });
         return { popped: "none" };
       }
 
       const topActivity = stack.activities[stack.activities.length - 1];
       if (!topActivity) {
-        return { popped: "exit" };
+        console.log("[LayerController] no activities, allow exit");
+        const result: BackActionResult = { popped: "exit" };
+        console.log("[LayerController] back result", result);
+        return result;
       }
+
+      console.log("[LayerController] topActivity", topActivity.id, {
+        name: topActivity.name,
+        isRoot: topActivity.isRoot,
+        stepCount: topActivity.steps.length,
+      });
 
       const topStep = topActivity.steps[topActivity.steps.length - 1];
       if (topStep) {
+        console.log("[LayerController] popping step", topStep.id);
         actions.stepPop({
           targetActivityId: topActivity.id,
         });
-        return { popped: "step", targetId: topStep.id };
+        const result: BackActionResult = {
+          popped: "step",
+          targetId: topStep.id,
+        };
+        console.log("[LayerController] back result", result);
+        return result;
       }
 
       if (!topActivity.isRoot) {
+        console.log("[LayerController] popping activity", topActivity.id);
         actions.pop();
-        return { popped: "activity", targetId: topActivity.id };
+        const result: BackActionResult = {
+          popped: "activity",
+          targetId: topActivity.id,
+        };
+        console.log("[LayerController] back result", result);
+        return result;
       }
 
-      const shouldExit = confirmExit ? await confirmExit() : false;
-      return shouldExit ? { popped: "exit" } : { popped: "none" };
+      console.log("[LayerController] root reached, allow exit");
+      const result: BackActionResult = { popped: "exit" };
+      console.log("[LayerController] back result", result);
+      return result;
     } finally {
       this.handlingBack = false;
     }
@@ -220,7 +269,9 @@ class LayerController {
   }
 
   private pruneOrphanedModals(stack: Stack) {
-    const activeActivityIds = new Set(stack.activities.map((activity) => activity.id));
+    const activeActivityIds = new Set(
+      stack.activities.map((activity) => activity.id)
+    );
 
     for (const [modalId, modal] of Array.from(this.modalRegistry.entries())) {
       const hasOwner = modal.activityId

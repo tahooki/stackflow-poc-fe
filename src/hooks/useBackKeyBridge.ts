@@ -11,25 +11,21 @@ declare global {
   }
 }
 
-const defaultConfirmExit = async () => {
-  if (typeof window === "undefined" || typeof window.confirm !== "function") {
-    return true;
-  }
-  return window.confirm("앱을 종료할까요?");
-};
-
 export const useBackKeyBridge = () => {
   useEffect(() => {
     const handler = async () => {
-      const result = await layerController.handleBackPress(defaultConfirmExit);
+      console.log("[BackBridge] onBackKeyClick invoked");
+      const result = await layerController.handleBackPress();
+      console.log("[BackBridge] layerController result", result);
       const report = window.BRIDGE?.onBackKeyReuslt;
 
       if (typeof report === "function") {
-        // true: 앱이 핸들링됨(종료하지 않음), false: 종료 허용
-        report(result.popped !== "exit");
+        // true: 스택에 더 이상 pop 할 게 없어서 네이티브가 종료 여부를 결정할 수 있게 함
+        report(result.popped === "exit");
       }
     };
 
+    console.log("[BackBridge] window.onBackKeyClick registered");
     window.onBackKeyClick = handler;
 
     return () => {

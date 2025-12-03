@@ -80,10 +80,6 @@ export const ensureStackflowInstance = (
         }),
         navFlagPlugin(),
         layerStackPlugin(),
-        historySyncPlugin({
-          routes: historyRoutes,
-          fallbackActivity: () => fallbackName,
-        }),
       ],
     });
   }
@@ -124,9 +120,7 @@ export const useFlow = () => {
   return getAppStack().useFlow();
 };
 
-export const useStepFlow = <
-  K extends Extract<keyof ActivityRegistry, string>
->(
+export const useStepFlow = <K extends Extract<keyof ActivityRegistry, string>>(
   activityName: K
 ) => {
   return getAppStack().useStepFlow(activityName);

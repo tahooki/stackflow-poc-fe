@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 
+import { BackBridgeButton } from "../components/BackBridgeButton";
 import { LayerStackDevtools } from "../components/LayerStackDevtools";
 import { LayerStackProvider } from "../contexts/LayerStackContext";
 import { useBackKeyBridge } from "../hooks/useBackKeyBridge";
@@ -33,6 +34,7 @@ export function NFXStack({ routes, fallbackActivity }: Props) {
     <LayerStackProvider>
       <Stack />
       <LayerStackDevtools />
+      <BackBridgeButton />
     </LayerStackProvider>
   );
 }
