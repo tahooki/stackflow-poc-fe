@@ -6,6 +6,7 @@ import { historySyncPlugin } from "@stackflow/plugin-history-sync";
 import type { RouteLike } from "@stackflow/plugin-history-sync";
 
 import { navFlagPlugin } from "../plugins/navFlagPlugin";
+import { layerStackPlugin } from "../plugins/layerStackPlugin";
 
 type GenericActivity = ActivityComponentType<Record<string, unknown>>;
 export type ActivityRegistry = Record<string, GenericActivity>;
@@ -78,6 +79,7 @@ export const ensureStackflowInstance = (
           theme: "android",
         }),
         navFlagPlugin(),
+        layerStackPlugin(),
         historySyncPlugin({
           routes: historyRoutes,
           fallbackActivity: () => fallbackName,

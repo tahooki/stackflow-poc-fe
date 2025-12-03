@@ -1,5 +1,8 @@
 import { useMemo } from "react";
 
+import { LayerStackDevtools } from "../components/LayerStackDevtools";
+import { LayerStackProvider } from "../contexts/LayerStackContext";
+import { useBackKeyBridge } from "../hooks/useBackKeyBridge";
 import type { StackRouteConfig } from "./nfxStackCore";
 import {
   ensureStackflowInstance,
@@ -19,10 +22,17 @@ export function NFXStack({ routes, fallbackActivity }: Props) {
   );
   const { Stack, addActivity } = stack;
 
+  useBackKeyBridge();
+
   useMemo(() => {
     // 선언된 액티비티를 Stackflow에 등록하되 이미 등록된 이름은 건너뛴다.
     registerActivities(routes, addActivity);
   }, [routes, addActivity]);
 
-  return <Stack />;
+  return (
+    <LayerStackProvider>
+      <Stack />
+      <LayerStackDevtools />
+    </LayerStackProvider>
+  );
 }

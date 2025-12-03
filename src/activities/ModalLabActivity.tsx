@@ -1,10 +1,11 @@
 import { AppScreen } from "@stackflow/plugin-basic-ui";
-import type { ActivityComponentType } from "@stackflow/react";
+import { useActivity, type ActivityComponentType } from "@stackflow/react";
 import Modal from "react-modal";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import "../assets/modalLab.css";
 import { useNavActions } from "../hooks/useNavActions";
+import { useModalLayer } from "../hooks/useModalLayer";
 
 type ModalTemplate = {
   title: string;
@@ -50,6 +51,7 @@ const templates: ModalTemplate[] = [
 ];
 
 const ModalLabActivity: ActivityComponentType = () => {
+  const activity = useActivity();
   const [activeTemplate, setActiveTemplate] = useState<ModalTemplate>(
     templates[0]
   );
@@ -69,8 +71,16 @@ const ModalLabActivity: ActivityComponentType = () => {
     setIsOpen(false);
   }, []);
 
+  useModalLayer({
+    id: "modal-lab-overlay",
+    isOpen,
+    label: activeTemplate.title,
+    onClose: closeModal,
+  });
+
+  const isPortalVisible = isOpen && activity.isTop;
+
   const openDetailFromModal = useCallback(() => {
-    closeModal();
     push("detail", {
       id: "modal-hop",
       title: "Opened from Modal.open() demo",
@@ -149,7 +159,7 @@ const closeModal = () => setIsOpen(false);
       </div>
 
       <Modal
-        isOpen={isOpen}
+        isOpen={isPortalVisible}
         onRequestClose={closeModal}
         overlayClassName="modal-lab__overlay"
         className="modal-lab__content"
