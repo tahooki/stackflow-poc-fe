@@ -189,10 +189,7 @@ class LayerController {
       console.log("[LayerController] handleBackPress start");
       const actions = this.actions;
       const stack = actions?.getStack() ?? this.lastStack;
-      const topActivity =
-        stack && stack.activities.length > 0
-          ? stack.activities[stack.activities.length - 1]
-          : undefined;
+      const topActivity = this.getTopActivity(stack);
 
       const topModal = this.getTopModalForActivity(topActivity?.id);
       if (topModal) {
@@ -231,13 +228,16 @@ class LayerController {
         stepCount: topActivity.steps.length,
       });
 
-      const topStep = topActivity.steps[topActivity.steps.length - 1];
+      const stepCount = topActivity.steps.length;
+      const topStep =
+        stepCount > 1 ? topActivity.steps[topActivity.steps.length - 1] : null;
       if (topStep) {
-        console.log("[LayerController] popping step", topStep.id);
-        actions.pop();
-        // actions.stepPop({
-        //   targetActivityId: topActivity.id,
-        // });
+        console.log("[LayerController] popping step", topStep.id, {
+          stepCount,
+        });
+        actions.stepPop({
+          targetActivityId: topActivity.id,
+        });
         const result: BackActionResult = {
           popped: "step",
           targetId: topStep.id,
@@ -277,6 +277,27 @@ class LayerController {
     }
 
     return undefined;
+  }
+
+  private getTopActivity(stack: Stack | null) {
+    if (!stack) {
+      return undefined;
+    }
+
+    const flaggedTop = stack.activities.find((activity) => activity.isTop);
+    if (flaggedTop) {
+      return flaggedTop;
+    }
+
+    // Fallback: pick the highest z-index activity that hasn't exited.
+    const visible = stack.activities.filter((activity) => !activity.exitedBy);
+    if (visible.length === 0) {
+      return undefined;
+    }
+
+    return visible.reduce((current, candidate) =>
+      candidate.zIndex >= current.zIndex ? candidate : current
+    );
   }
 
   private emit() {
