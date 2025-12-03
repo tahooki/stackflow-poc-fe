@@ -187,9 +187,19 @@ class LayerController {
     this.handlingBack = true;
     try {
       console.log("[LayerController] handleBackPress start");
-      const topModal = this.getTopModal();
+      const actions = this.actions;
+      const stack = actions?.getStack() ?? this.lastStack;
+      const topActivity =
+        stack && stack.activities.length > 0
+          ? stack.activities[stack.activities.length - 1]
+          : undefined;
+
+      const topModal = this.getTopModalForActivity(topActivity?.id);
       if (topModal) {
-        console.log("[LayerController] popping modal", topModal.id);
+        console.log("[LayerController] popping modal", topModal.id, {
+          modalActivityId: topModal.activityId,
+          topActivityId: topActivity?.id,
+        });
         this.unregisterModalLayer(topModal.id);
         topModal.onClose?.();
         const result: BackActionResult = {
@@ -200,9 +210,6 @@ class LayerController {
         return result;
       }
 
-      const actions = this.actions;
-      const stack = actions?.getStack() ?? this.lastStack;
-
       if (!actions || !stack) {
         console.log("[LayerController] no actions/stack", {
           hasActions: Boolean(actions),
@@ -211,7 +218,6 @@ class LayerController {
         return { popped: "none" };
       }
 
-      const topActivity = stack.activities[stack.activities.length - 1];
       if (!topActivity) {
         console.log("[LayerController] no activities, allow exit");
         const result: BackActionResult = { popped: "exit" };
@@ -228,9 +234,10 @@ class LayerController {
       const topStep = topActivity.steps[topActivity.steps.length - 1];
       if (topStep) {
         console.log("[LayerController] popping step", topStep.id);
-        actions.stepPop({
-          targetActivityId: topActivity.id,
-        });
+        actions.pop();
+        // actions.stepPop({
+        //   targetActivityId: topActivity.id,
+        // });
         const result: BackActionResult = {
           popped: "step",
           targetId: topStep.id,
@@ -259,9 +266,17 @@ class LayerController {
     }
   }
 
-  private getTopModal() {
+  private getTopModalForActivity(activityId?: string) {
     const modals = Array.from(this.modalRegistry.values()).sort(sortByOpenedAt);
-    return modals[modals.length - 1];
+
+    for (let i = modals.length - 1; i >= 0; i -= 1) {
+      const modal = modals[i];
+      if (!activityId || !modal.activityId || modal.activityId === activityId) {
+        return modal;
+      }
+    }
+
+    return undefined;
   }
 
   private emit() {

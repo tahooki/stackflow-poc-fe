@@ -14,7 +14,11 @@ declare global {
 export const useBackKeyBridge = () => {
   useEffect(() => {
     const handler = async () => {
-      console.log("[BackBridge] onBackKeyClick invoked");
+      console.log(
+        "[BackBridge] onBackKeyClick invoked",
+        layerController,
+        "qwe"
+      );
       const result = await layerController.handleBackPress();
       console.log("[BackBridge] layerController result", result);
       const report = window.BRIDGE?.onBackKeyReuslt;
