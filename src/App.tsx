@@ -4,6 +4,7 @@ import "./App.css";
 import DetailActivity from "./activities/DetailActivity";
 import HomeActivity from "./activities/HomeActivity";
 import OrdersActivity from "./activities/OrdersActivity";
+import ModalLabActivity from "./activities/ModalLabActivity";
 import SnapshotActivity from "./activities/SnapshotActivity";
 import { NFXStack } from "./lib/NFXStack";
 import type { StackRouteConfig } from "./lib/nfxStackCore";
@@ -34,6 +35,13 @@ const stackRoutes: StackRouteConfig[] = [
     activity: SnapshotActivity,
     route: {
       path: "/snapshot",
+    },
+  },
+  {
+    name: "modal",
+    activity: ModalLabActivity,
+    route: {
+      path: "/modal",
     },
   },
 ];

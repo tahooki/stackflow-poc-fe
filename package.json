@@ -21,7 +21,8 @@
     "ag-grid-react": "^34.3.0",
     "dom-to-image-more": "^3.7.2",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "react-modal": "^3.16.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

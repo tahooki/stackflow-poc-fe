@@ -84,6 +84,9 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
             >
               Try AG Grid card view
             </button>
+            <button type="button" onClick={() => push("modal", undefined)}>
+              Modal.open() demo (full-screen)
+            </button>
             <button type="button" onClick={() => push("snapshot", undefined)}>
               Screenshot lab with Scroll Stress
             </button>

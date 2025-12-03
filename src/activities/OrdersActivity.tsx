@@ -306,7 +306,8 @@ const OrdersActivity: ActivityComponentType = () => {
   );
 
   const handleCellMouseOut = useCallback(
-    (_: CellMouseOutEvent<OrderRow>) => {
+    (event: CellMouseOutEvent<OrderRow>) => {
+      void event;
       clearLongPressCandidate();
     },
     [clearLongPressCandidate]
