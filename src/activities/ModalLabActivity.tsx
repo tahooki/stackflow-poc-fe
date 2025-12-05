@@ -1,11 +1,11 @@
 import { AppScreen } from "@stackflow/plugin-basic-ui";
 import { useActivity, type ActivityComponentType } from "@stackflow/react";
 import Modal from "react-modal";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 import "../assets/modalLab.css";
 import { useNavActions } from "../hooks/useNavActions";
-import { useModalLayer } from "../hooks/useModalLayer";
+import { useImperativeModal } from "../hooks/useImperativeModal";
 
 type ModalTemplate = {
   title: string;
@@ -52,40 +52,74 @@ const templates: ModalTemplate[] = [
 
 const ModalLabActivity: ActivityComponentType = () => {
   const activity = useActivity();
-  const [activeTemplate, setActiveTemplate] = useState<ModalTemplate>(
-    templates[0]
-  );
-  const [isOpen, setIsOpen] = useState(false);
   const { push } = useNavActions();
+  const {
+    open: openImperativeModal,
+    ModalPortal,
+  } = useImperativeModal({
+    id: "modal-lab-overlay",
+    overlayClassName: "modal-lab__overlay",
+    contentClassName: "modal-lab__content",
+    bodyOpenClassName: "modal-lab__body-open",
+  });
 
   useEffect(() => {
     Modal.setAppElement("#root");
   }, []);
 
-  const openModal = useCallback((template: ModalTemplate) => {
-    setActiveTemplate(template);
-    setIsOpen(true);
-  }, []);
-
-  const closeModal = useCallback(() => {
-    setIsOpen(false);
-  }, []);
-
-  useModalLayer({
-    id: "modal-lab-overlay",
-    isOpen,
-    label: activeTemplate.title,
-    onClose: closeModal,
-  });
-
-  const isPortalVisible = isOpen && activity.isTop;
-
-  const openDetailFromModal = useCallback(() => {
-    push("detail", {
-      id: "modal-hop",
-      title: "Opened from Modal.open() demo",
-    });
-  }, [closeModal, push]);
+  const openModal = useCallback(
+    (template: ModalTemplate) => {
+      openImperativeModal({
+        label: template.title,
+        render: ({ close }) => (
+          <>
+            <div
+              className="modal-lab__pill"
+              style={{ backgroundColor: template.accent }}
+            >
+              Live overlay
+            </div>
+            <h2>{template.title}</h2>
+            <p className="modal-lab__description">{template.description}</p>
+            <ul className="modal-lab__list">
+              {template.bullets.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+            <div className="modal-lab__footer">
+              <div className="modal-lab__meta">
+                <span>react-modal</span>
+                <span>Full-screen overlay</span>
+                <span>Accessible focus trap</span>
+              </div>
+              <div className="modal-lab__controls">
+                <button
+                  type="button"
+                  className="modal-lab__ghost"
+                  onClick={close}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    close();
+                    push("detail", {
+                      id: "modal-hop",
+                      title: "Opened from Modal.open() demo",
+                    });
+                  }}
+                >
+                  Close and push Detail
+                </button>
+              </div>
+            </div>
+          </>
+        ),
+      });
+    },
+    [openImperativeModal, push]
+  );
 
   const templateButtons = useMemo(
     () =>
@@ -103,15 +137,29 @@ const ModalLabActivity: ActivityComponentType = () => {
 
   const snippet = `Modal.setAppElement('#root');
 
-const openModal = () => setIsOpen(true);
-const closeModal = () => setIsOpen(false);
+const { open, ModalPortal } = useImperativeModal({
+  id: 'my-overlay',
+  overlayClassName: 'modal-lab__overlay',
+  contentClassName: 'modal-lab__content',
+});
 
-<Modal
-  isOpen={isOpen}
-  onRequestClose={closeModal}
-  className="modal-lab__content"
-  overlayClassName="modal-lab__overlay"
-/>`;
+const openModal = () =>
+  open({
+    label: 'My modal',
+    render: ({ close }) => (
+      <div>
+        Modal.open() content
+        <button onClick={close}>Close</button>
+      </div>
+    ),
+  });
+
+return (
+  <>
+    <button onClick={openModal}>Modal.open()</button>
+    <ModalPortal />
+  </>
+);`;
 
   return (
     <AppScreen appBar={{ title: "Modal Lab" }}>
@@ -158,50 +206,7 @@ const closeModal = () => setIsOpen(false);
         </div>
       </div>
 
-      <Modal
-        isOpen={isPortalVisible}
-        onRequestClose={closeModal}
-        overlayClassName="modal-lab__overlay"
-        className="modal-lab__content"
-        bodyOpenClassName="modal-lab__body-open"
-        contentLabel="Full screen modal preview"
-        shouldFocusAfterRender
-        shouldCloseOnOverlayClick
-        shouldCloseOnEsc
-      >
-        <div
-          className="modal-lab__pill"
-          style={{ backgroundColor: activeTemplate.accent }}
-        >
-          Live overlay
-        </div>
-        <h2>{activeTemplate.title}</h2>
-        <p className="modal-lab__description">{activeTemplate.description}</p>
-        <ul className="modal-lab__list">
-          {activeTemplate.bullets.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-        <div className="modal-lab__footer">
-          <div className="modal-lab__meta">
-            <span>react-modal</span>
-            <span>Full-screen overlay</span>
-            <span>Accessible focus trap</span>
-          </div>
-          <div className="modal-lab__controls">
-            <button
-              type="button"
-              className="modal-lab__ghost"
-              onClick={closeModal}
-            >
-              Close
-            </button>
-            <button type="button" onClick={openDetailFromModal}>
-              Close and push Detail
-            </button>
-          </div>
-        </div>
-      </Modal>
+      {activity.isTop ? <ModalPortal /> : null}
     </AppScreen>
   );
 };
