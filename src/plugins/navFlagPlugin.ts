@@ -88,9 +88,8 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({ acti
   const stack = actions.getStack();
   const top = stack.activities[stack.activities.length - 1];
 
-  // push/replace 시에 재사용할 공통 유틸리티.
-  const pushActivity = (activityName: string) => {
-    actions.push({
+  const dispatchPush = (activityName: string) => {
+    actions.dispatchEvent('Pushed', {
       activityId: actionParams.activityId,
       activityName,
       activityParams: sanitizedParams,
@@ -99,14 +98,20 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({ acti
     });
   };
 
-  const replaceActivity = (activityName: string) => {
-    actions.replace({
+  const dispatchReplace = (activityName: string) => {
+    actions.dispatchEvent('Replaced', {
       activityId: actionParams.activityId,
       activityName,
       activityParams: sanitizedParams,
       activityContext: sanitizedContext,
       skipEnterActiveState: actionParams.skipEnterActiveState,
     });
+  };
+
+  const dispatchPopTimes = (count: number) => {
+    for (let i = 0; i < count; i += 1) {
+      actions.dispatchEvent('Popped', {});
+    }
   };
 
   // 목표 액티비티까지 스택을 되감은 뒤 replace로 재진입.
@@ -116,11 +121,12 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({ acti
       return false;
     }
 
-    for (let i = stack.activities.length - 1; i > index; i -= 1) {
-      actions.pop();
+    const popCount = stack.activities.length - index - 1;
+    if (popCount > 0) {
+      dispatchPopTimes(popCount);
     }
 
-    replaceActivity(activityName);
+    dispatchReplace(activityName);
     return true;
   };
 
@@ -128,30 +134,28 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({ acti
     case 'SINGLE_TOP': {
       // 최상단이 동일하면 replace, 아니면 push.
       if (top?.name === actionParams.activityName) {
-        replaceActivity(actionParams.activityName);
+        dispatchReplace(actionParams.activityName);
       } else {
-        pushActivity(actionParams.activityName);
+        dispatchPush(actionParams.activityName);
       }
       break;
     }
     case 'CLEAR_TOP': {
       // 대상이 스택에 있으면 위를 정리하고 replace, 없으면 새로 push.
       if (!rewindToActivity(navFlag.activity)) {
-        pushActivity(actionParams.activityName);
+        dispatchPush(actionParams.activityName);
       }
       break;
     }
     case 'CLEAR_STACK': {
       // 전체 스택을 비운 뒤 새 액티비티를 push.
-      for (let i = stack.activities.length - 1; i >= 0; i -= 1) {
-        actions.pop();
-      }
-      pushActivity(actionParams.activityName);
+      dispatchPopTimes(stack.activities.length);
+      dispatchPush(actionParams.activityName);
       break;
     }
     case 'JUMP_TO': {
       // 호출부 요청과 상관없이 지정된 액티비티로 이동.
-      pushActivity(navFlag.activity);
+      dispatchPush(navFlag.activity);
       break;
     }
     case 'CLEAR_TOP_SINGLE_TOP': {
@@ -160,9 +164,9 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({ acti
         break;
       }
       if (top?.name === actionParams.activityName) {
-        replaceActivity(actionParams.activityName);
+        dispatchReplace(actionParams.activityName);
       } else {
-        pushActivity(actionParams.activityName);
+        dispatchPush(actionParams.activityName);
       }
       break;
     }
@@ -171,12 +175,12 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({ acti
       if (rewindToActivity(target)) {
         break;
       }
-      pushActivity(target);
+      dispatchPush(target);
       break;
     }
     default: {
       // 안전장치: 정의되지 않은 플래그는 기본 push로 처리.
-      pushActivity(actionParams.activityName);
+      dispatchPush(actionParams.activityName);
     }
   }
 };
