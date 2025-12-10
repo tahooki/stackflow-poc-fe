@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useActivity } from "@stackflow/react";
 
-import { layerController } from "../lib/layerController";
+import { layerController as layerManager } from "../lib/layerManager";
 
 export type UseModalLayerOptions = {
   id?: string;
@@ -23,7 +23,7 @@ export const useModalLayer = ({
 
   useEffect(() => {
     if (isOpen) {
-      layerController.registerModalLayer({
+      layerManager.registerModalLayer({
         id: modalId,
         activityId: activity.id,
         label,
@@ -32,18 +32,11 @@ export const useModalLayer = ({
       });
 
       return () => {
-        layerController.unregisterModalLayer(modalId);
+        layerManager.unregisterModalLayer(modalId);
       };
     }
 
-    layerController.unregisterModalLayer(modalId);
+    layerManager.unregisterModalLayer(modalId);
     return undefined;
-  }, [
-    activity.id,
-    isOpen,
-    label,
-    modalId,
-    onClose,
-    persistAcrossActivities,
-  ]);
+  }, [activity.id, isOpen, label, modalId, onClose, persistAcrossActivities]);
 };

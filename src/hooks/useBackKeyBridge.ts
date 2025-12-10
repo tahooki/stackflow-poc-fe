@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { layerController } from "../lib/layerController";
+import { layerController } from "../lib/layerManager";
 
 declare global {
   interface Window {

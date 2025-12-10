@@ -7,8 +7,8 @@ import {
   type ReactNode,
 } from "react";
 
-import type { BackActionResult, LayerState } from "../lib/layerController";
-import { layerController } from "../lib/layerController";
+import type { BackActionResult, LayerState } from "../lib/layerManager";
+import { layerController } from "../lib/layerManager";
 
 type LayerStackContextValue = {
   state: LayerState;

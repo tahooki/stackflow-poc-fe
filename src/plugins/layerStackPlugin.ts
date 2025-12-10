@@ -1,6 +1,6 @@
 import type { StackflowReactPlugin } from "@stackflow/react";
 
-import { layerController } from "../lib/layerController";
+import { layerController } from "../lib/layerManager";
 
 export const layerStackPlugin = (): StackflowReactPlugin => () => ({
   key: "layer-stack-plugin",

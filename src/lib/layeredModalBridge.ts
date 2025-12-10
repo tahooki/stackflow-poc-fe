@@ -1,4 +1,4 @@
-import { layerController } from "./layerController";
+import { layerController } from "./layerManager";
 
 type ModalInstance = {
   destroy?: () => void;
