@@ -11,7 +11,11 @@ export const useHistoryBackBridge = () => {
     }
 
     const pushGuardState = () => {
-      window.history.pushState({ __backBridge: true }, "", window.location.href);
+      window.history.pushState(
+        { __backBridge: true },
+        "",
+        window.location.href
+      );
     };
 
     pushGuardState();
