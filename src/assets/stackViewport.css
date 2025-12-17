@@ -1,0 +1,17 @@
+.stack-viewport {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.stack-viewport__stack {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+
+.stack-viewport__stack--active {
+  display: block;
+}
+

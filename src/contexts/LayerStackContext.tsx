@@ -8,7 +8,8 @@ import {
 } from "react";
 
 import type { BackActionResult, LayerState } from "../lib/layerManager";
-import { layerController } from "../lib/layerManager";
+import { getLayerController } from "../lib/layerManager";
+import { useStacks } from "./StackContext";
 
 type LayerStackContextValue = {
   state: LayerState;
@@ -18,19 +19,25 @@ type LayerStackContextValue = {
 const LayerStackContext = createContext<LayerStackContextValue | null>(null);
 
 export const LayerStackProvider = ({ children }: { children: ReactNode }) => {
-  const [state, setState] = useState<LayerState>(layerController.getState());
+  const { activeStack } = useStacks();
+  const controller = useMemo(
+    () => getLayerController(activeStack),
+    [activeStack]
+  );
+  const [state, setState] = useState<LayerState>(controller.getState());
 
   useEffect(() => {
-    const unsubscribe = layerController.subscribe(setState);
+    setState(controller.getState());
+    const unsubscribe = controller.subscribe(setState);
     return () => unsubscribe();
-  }, []);
+  }, [controller]);
 
   const value = useMemo(
     () => ({
       state,
-      handleBack: () => layerController.handleBackPress(),
+      handleBack: () => controller.handleBackPress(),
     }),
-    [state]
+    [controller, state]
   );
 
   return (

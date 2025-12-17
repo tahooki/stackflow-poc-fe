@@ -321,4 +321,15 @@ class LayerController {
   }
 }
 
-export const layerController = new LayerController();
+const controllers = new Map<string, LayerController>();
+
+export const getLayerController = (stackName: string) => {
+  const existing = controllers.get(stackName);
+  if (existing) {
+    return existing;
+  }
+
+  const next = new LayerController();
+  controllers.set(stackName, next);
+  return next;
+};

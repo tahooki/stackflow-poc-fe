@@ -4,7 +4,7 @@ import Modal from "react-modal";
 import { useCallback, useEffect, useMemo } from "react";
 
 import "../assets/modalLab.css";
-import { useNavActions } from "../hooks/useNavActions";
+import { useStackActions } from "../hooks/useStackActions";
 import { useImperativeModal } from "../hooks/useImperativeModal";
 
 type ModalTemplate = {
@@ -52,7 +52,7 @@ const templates: ModalTemplate[] = [
 
 const ModalLabActivity: ActivityComponentType = () => {
   const activity = useActivity();
-  const { push } = useNavActions();
+  const { push } = useStackActions();
   const {
     open: openImperativeModal,
     ModalPortal,
@@ -193,12 +193,12 @@ return (
               <button
                 type="button"
                 onClick={() =>
-                  push("orders", undefined, { navFlag: { flag: "SINGLE_TOP" } })
+                  push("orders", {}, { navFlag: { flag: "SINGLE_TOP" } })
                 }
               >
                 Navigate to Orders
               </button>
-              <button type="button" onClick={() => push("snapshot", undefined)}>
+              <button type="button" onClick={() => push("snapshot", {})}>
                 Jump to Snapshot lab
               </button>
             </div>

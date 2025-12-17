@@ -2,7 +2,7 @@ import { AppScreen } from "@stackflow/plugin-basic-ui";
 import type { ActivityComponentType } from "@stackflow/react";
 import { useMemo } from "react";
 
-import { useNavActions } from "../hooks/useNavActions";
+import { useStackActions } from "../hooks/useStackActions";
 
 export type DetailActivityParams = {
   id: string;
@@ -20,7 +20,7 @@ const DetailActivity: ActivityComponentType<DetailActivityParams> = ({
 }: {
   params: DetailActivityParams;
 }) => {
-  const { push } = useNavActions();
+  const { push } = useStackActions();
   const randomTip = useMemo(
     () => fallbackTips[Math.floor(Math.random() * fallbackTips.length)],
     []
@@ -68,7 +68,7 @@ const DetailActivity: ActivityComponentType<DetailActivityParams> = ({
             >
               Refresh detail (SINGLE_TOP)
             </button>
-            <button type="button" onClick={() => push("snapshot", undefined)}>
+            <button type="button" onClick={() => push("snapshot", {})}>
               Snapshot
             </button>
           </div>

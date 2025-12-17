@@ -1,4 +1,5 @@
-import { layerController } from "./layerManager";
+import { getLayerController } from "./layerManager";
+import { initStack } from "../stack/stackConfig";
 
 type ModalInstance = {
   destroy?: () => void;
@@ -27,6 +28,11 @@ export type OpenLayeredModalOptions<TModal extends ModalInstance | void> = {
    * 모달 닫힘 시 추가 정리가 필요하면 전달 (예: analytics)
    */
   onClose?: () => void;
+  /**
+   * 다중 스택 환경에서 모달을 귀속시킬 스택 이름.
+   * 지정하지 않으면 initStack으로 귀속된다.
+   */
+  stackName?: string;
 };
 
 /**
@@ -54,18 +60,20 @@ export const openLayeredModal = <TModal extends ModalInstance | void>({
   persistAcrossActivities,
   openModal,
   onClose,
+  stackName,
 }: OpenLayeredModalOptions<TModal>) => {
   let instance: TModal | null = null;
+  const controller = getLayerController(stackName ?? initStack);
 
   const cleanup = () => {
-    layerController.unregisterModalLayer(id);
+    controller.unregisterModalLayer(id);
     onClose?.();
     const modal = instance as ModalInstance | null;
     modal?.destroy?.();
     modal?.close?.();
   };
 
-  layerController.registerModalLayer({
+  controller.registerModalLayer({
     id,
     label,
     persistAcrossActivities,

@@ -146,7 +146,6 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({
     if (popCount > 0) {
       dispatchPopTimes(popCount);
     }
-    ㅌ;
     dispatchReplace(activityName);
     return true;
   };

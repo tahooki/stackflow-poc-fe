@@ -1,56 +1,37 @@
 import "@stackflow/plugin-basic-ui/index.css";
 import "./App.css";
 
-import DetailActivity from "./activities/DetailActivity";
-import HomeActivity from "./activities/HomeActivity";
-import OrdersActivity from "./activities/OrdersActivity";
-import ModalLabActivity from "./activities/ModalLabActivity";
-import SnapshotActivity from "./activities/SnapshotActivity";
-import { NFXStack } from "./lib/NFXStack";
-import type { StackRouteConfig } from "./lib/nfxStackCore";
+import { BackBridgeButton } from "./components/BackBridgeButton";
+import { BottomNav } from "./components/BottomNav";
+import { LayerStackDevtools } from "./components/LayerStackDevtools";
+import { StackViewport } from "./components/StackViewport";
+import { LayerStackProvider } from "./contexts/LayerStackContext";
+import { StackProvider } from "./contexts/StackContext";
+import { useBackKeyBridge } from "./hooks/useBackKeyBridge";
+import { useHistoryBackBridge } from "./hooks/useHistoryBackBridge";
+import { GlobalLayout } from "./layouts/GlobalLayout";
 
-const stackRoutes: StackRouteConfig[] = [
-  {
-    name: "home",
-    activity: HomeActivity,
-    route: "/",
-    initial: true,
-  },
-  {
-    name: "detail",
-    activity: DetailActivity,
-    route: {
-      path: "/detail/:id",
-    },
-  },
-  {
-    name: "orders",
-    activity: OrdersActivity,
-    route: {
-      path: "/orders",
-    },
-  },
-  {
-    name: "snapshot",
-    activity: SnapshotActivity,
-    route: {
-      path: "/snapshot",
-    },
-  },
-  {
-    name: "modal",
-    activity: ModalLabActivity,
-    route: {
-      path: "/modal",
-    },
-  },
-];
+const AppShell = () => {
+  useBackKeyBridge();
+  useHistoryBackBridge();
+
+  return (
+    <LayerStackProvider>
+      <GlobalLayout>
+        <StackViewport />
+        <BottomNav />
+        <LayerStackDevtools />
+        <BackBridgeButton />
+      </GlobalLayout>
+    </LayerStackProvider>
+  );
+};
 
 function App() {
   return (
-    <div className="app">
-      <NFXStack routes={stackRoutes} />
-    </div>
+    <StackProvider>
+      <AppShell />
+    </StackProvider>
   );
 }
 

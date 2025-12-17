@@ -3,7 +3,7 @@ import type React from "react";
 const buttonStyle: React.CSSProperties = {
   position: "fixed",
   left: "12px",
-  bottom: "12px",
+  bottom: "72px",
   zIndex: 9999,
   padding: "8px 12px",
   borderRadius: "999px",

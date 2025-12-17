@@ -3,7 +3,7 @@ import type { ActivityComponentType } from "@stackflow/react";
 
 import { useMemo } from "react";
 
-import { useNavActions } from "../hooks/useNavActions";
+import { useStackActions } from "../hooks/useStackActions";
 
 export type HomeActivityParams = {
   highlight?: string;
@@ -20,7 +20,7 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
 }: {
   params: HomeActivityParams;
 }) => {
-  const { push } = useNavActions();
+  const { push } = useStackActions();
   const heroMessage = useMemo(
     () => messages[Math.floor(Math.random() * messages.length)],
     []
@@ -77,18 +77,35 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
             <button
               type="button"
               onClick={() =>
-                push("orders", undefined, {
+                push("orders", {}, {
                   navFlag: { flag: "SINGLE_TOP" },
                 })
               }
             >
               Try AG Grid card view
             </button>
-            <button type="button" onClick={() => push("modal", undefined)}>
+            <button
+              type="button"
+              onClick={() =>
+                push("orders", {}, {
+                  stack: "orders",
+                  navFlag: { flag: "SINGLE_TOP" },
+                })
+              }
+            >
+              Switch to Orders stack + push Orders
+            </button>
+            <button type="button" onClick={() => push("modal", {})}>
               Modal.open() demo (full-screen)
             </button>
-            <button type="button" onClick={() => push("snapshot", undefined)}>
+            <button type="button" onClick={() => push("snapshot", {})}>
               Screenshot lab with Scroll Stress
+            </button>
+            <button
+              type="button"
+              onClick={() => push("snapshot", {}, { stack: "snapshot" })}
+            >
+              Switch to Snapshot stack
             </button>
           </div>
         </section>

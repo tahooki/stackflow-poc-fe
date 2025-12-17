@@ -1,13 +1,20 @@
 import type { StackflowReactPlugin } from "@stackflow/react";
 
-import { layerController } from "../lib/layerManager";
+import { getLayerController } from "../lib/layerManager";
+import type { StackName } from "../stack/stackConfig";
 
-export const layerStackPlugin = (): StackflowReactPlugin => () => ({
-  key: "layer-stack-plugin",
-  onInit: ({ actions }) => {
-    layerController.attach(actions);
-  },
-  onChanged: ({ actions }) => {
-    layerController.syncFromStack(actions.getStack());
-  },
-});
+export const layerStackPlugin =
+  (stackName: StackName): StackflowReactPlugin =>
+  () => {
+    const controller = getLayerController(stackName);
+
+    return {
+      key: `layer-stack-plugin:${stackName}`,
+      onInit: ({ actions }) => {
+        controller.attach(actions);
+      },
+      onChanged: ({ actions }) => {
+        controller.syncFromStack(actions.getStack());
+      },
+    };
+  };
