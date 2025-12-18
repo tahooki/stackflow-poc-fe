@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-import { getStackSwitchController } from "../lib/layerManager";
+import { stackManager } from "../stack/stackManager";
 import { useStacks } from "../contexts/StackContext";
 
 declare global {
@@ -22,11 +22,10 @@ export const useBackKeyBridge = () => {
 
   useEffect(() => {
     const handler = async () => {
-      const controller = getStackSwitchController();
       console.log("[BackBridge] onBackKeyClick invoked", {
         stack: activeStackRef.current,
       });
-      const result = await controller.handleBackPress();
+      const result = await stackManager.handleBackPress();
       console.log("[BackBridge] layerController result", result);
       const report = window.BRIDGE?.onBackKeyReuslt;
 

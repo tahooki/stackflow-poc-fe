@@ -7,7 +7,6 @@ import {
   type ReactNode,
 } from "react";
 
-import { getStackSwitchController } from "../lib/layerManager";
 import { stackManager, type StackManager } from "../stack/stackManager";
 import type { StackName } from "../stack/stackConfig";
 
@@ -27,18 +26,14 @@ const StackScopeContext = createContext<StackScopeValue | null>(null);
 
 export const StackProvider = ({ children }: { children: ReactNode }) => {
   const manager = useMemo(() => stackManager, []);
-  const stackSwitch = useMemo(
-    () => getStackSwitchController(manager.config.initStack),
-    [manager]
-  );
   const activeStack = useSyncExternalStore(
-    stackSwitch.subscribe.bind(stackSwitch),
-    () => stackSwitch.getState().activeStack as StackName,
-    () => stackSwitch.getState().activeStack as StackName
+    manager.subscribeStackSwitch.bind(manager),
+    () => manager.getStackSwitchState().activeStack,
+    () => manager.getStackSwitchState().activeStack
   );
   const setActiveStack = useCallback(
-    (next: StackName) => stackSwitch.setActiveStack(next),
-    [stackSwitch]
+    (next: StackName) => manager.setActiveStack(next),
+    [manager]
   );
 
   const value = useMemo(

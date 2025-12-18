@@ -9,7 +9,8 @@ import {
 } from "react";
 
 import type { BackActionResult, LayerState } from "../lib/layerManager";
-import { getLayerController, getStackSwitchController } from "../lib/layerManager";
+import { getLayerController } from "../lib/layerManager";
+import { stackManager } from "../stack/stackManager";
 import { useStacks } from "./StackContext";
 
 type LayerStackContextValue = {
@@ -34,7 +35,7 @@ export const LayerStackProvider = ({ children }: { children: ReactNode }) => {
   }, [controller]);
 
   const handleBack = useCallback(
-    () => getStackSwitchController().handleBackPress(),
+    () => stackManager.handleBackPress(),
     []
   );
 
