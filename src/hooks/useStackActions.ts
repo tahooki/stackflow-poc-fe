@@ -4,6 +4,7 @@ import { useOptionalStackScope, useStacks } from "../contexts/StackContext";
 import type { StackName } from "../stack/stackConfig";
 import type { NavFlag } from "../plugins/navFlagPlugin";
 import { NAV_FLAG_INTERNAL_FIELD } from "../plugins/navFlagPlugin";
+import type { StackInstance } from "../lib/stack/createStackflowInstance";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -14,14 +15,14 @@ export type StackPushOptions = {
 };
 
 export const useStackActions = () => {
-  const { stacks, activeStack, setActiveStack } = useStacks();
+  const { stackManager, activeStack, setActiveStack } = useStacks();
   const scope = useOptionalStackScope();
 
   const defaultStack = scope?.stackName ?? activeStack;
 
   const getStack = useCallback(
-    (stackName?: StackName) => stacks[stackName ?? defaultStack],
-    [defaultStack, stacks]
+    (stackName?: StackName) => stackManager.getStack(stackName ?? defaultStack),
+    [defaultStack, stackManager]
   );
 
   const switchStack = useCallback(
@@ -31,8 +32,8 @@ export const useStackActions = () => {
 
   const push = useCallback(
     (
-      activityName: Parameters<(typeof stacks)[StackName]["actions"]["push"]>[0],
-      params: Parameters<(typeof stacks)[StackName]["actions"]["push"]>[1],
+      activityName: Parameters<StackInstance["actions"]["push"]>[0],
+      params: Parameters<StackInstance["actions"]["push"]>[1],
       options?: StackPushOptions
     ) => {
       const targetStack = options?.stack ?? defaultStack;
@@ -55,15 +56,17 @@ export const useStackActions = () => {
           : params;
 
       const baseOptions = typeof animate === "boolean" ? { animate } : undefined;
-      return stacks[targetStack].actions.push(activityName, payload, baseOptions);
+      return stackManager
+        .getStack(targetStack)
+        .actions.push(activityName, payload, baseOptions);
     },
-    [activeStack, defaultStack, setActiveStack, stacks]
+    [activeStack, defaultStack, setActiveStack, stackManager]
   );
 
   const replace = useCallback(
     (
-      activityName: Parameters<(typeof stacks)[StackName]["actions"]["replace"]>[0],
-      params: Parameters<(typeof stacks)[StackName]["actions"]["replace"]>[1],
+      activityName: Parameters<StackInstance["actions"]["replace"]>[0],
+      params: Parameters<StackInstance["actions"]["replace"]>[1],
       options?: Omit<StackPushOptions, "navFlag"> & { stack?: StackName }
     ) => {
       const targetStack = options?.stack ?? defaultStack;
@@ -77,36 +80,36 @@ export const useStackActions = () => {
           ? { animate: options.animate }
           : undefined;
 
-      return stacks[targetStack].actions.replace(activityName, params, baseOptions);
+      return stackManager
+        .getStack(targetStack)
+        .actions.replace(activityName, params, baseOptions);
     },
-    [activeStack, defaultStack, setActiveStack, stacks]
+    [activeStack, defaultStack, setActiveStack, stackManager]
   );
 
   const pop = useCallback(
-    (...args: Parameters<(typeof stacks)[StackName]["actions"]["pop"]>) => {
+    (...args: Parameters<StackInstance["actions"]["pop"]>) => {
       return getStack().actions.pop(...args);
     },
     [getStack]
   );
 
   const stepPush = useCallback(
-    (...args: Parameters<(typeof stacks)[StackName]["actions"]["stepPush"]>) => {
+    (...args: Parameters<StackInstance["actions"]["stepPush"]>) => {
       return getStack().actions.stepPush(...args);
     },
     [getStack]
   );
 
   const stepReplace = useCallback(
-    (
-      ...args: Parameters<(typeof stacks)[StackName]["actions"]["stepReplace"]>
-    ) => {
+    (...args: Parameters<StackInstance["actions"]["stepReplace"]>) => {
       return getStack().actions.stepReplace(...args);
     },
     [getStack]
   );
 
   const stepPop = useCallback(
-    (...args: Parameters<(typeof stacks)[StackName]["actions"]["stepPop"]>) => {
+    (...args: Parameters<StackInstance["actions"]["stepPop"]>) => {
       return getStack().actions.stepPop(...args);
     },
     [getStack]

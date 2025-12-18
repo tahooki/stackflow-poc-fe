@@ -1,9 +1,8 @@
 import { useEffect } from "react";
 import { useActivity } from "@stackflow/react";
 
-import { useOptionalStackScope } from "../contexts/StackContext";
+import { useOptionalStackScope, useStacks } from "../contexts/StackContext";
 import { getLayerController } from "../lib/layerManager";
-import { initStack } from "../stack/stackConfig";
 
 export type UseModalLayerOptions = {
   id?: string;
@@ -21,9 +20,10 @@ export const useModalLayer = ({
   onClose,
 }: UseModalLayerOptions) => {
   const activity = useActivity();
+  const { activeStack } = useStacks();
   const scope = useOptionalStackScope();
   const modalId = explicitId ?? `${activity.id}-modal`;
-  const controller = getLayerController(scope?.stackName ?? initStack);
+  const controller = getLayerController(scope?.stackName ?? activeStack);
 
   useEffect(() => {
     if (isOpen) {

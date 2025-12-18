@@ -38,9 +38,9 @@ export type ActivityRegistry = {
 
 export type ActivityName = Extract<keyof ActivityRegistry, string>;
 
-export const initStack: StackName = "home";
+const initStack: StackName = "home";
 
-export const stackList = {
+const stackList = {
   home: {
     label: "Home",
     initialActivity: "home",
@@ -54,3 +54,9 @@ export const stackList = {
     initialActivity: "snapshot",
   },
 } as const satisfies Record<StackName, { label: string; initialActivity: ActivityName }>;
+
+export const stackManagerConfig = {
+  initStack,
+  stackList,
+  routes: stackRoutes,
+} as const;

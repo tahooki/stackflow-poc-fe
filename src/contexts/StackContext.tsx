@@ -7,17 +7,12 @@ import {
   type ReactNode,
 } from "react";
 
-import { createStackflowInstance, type StackInstance } from "../lib/stack/createStackflowInstance";
 import { getStackSwitchController } from "../lib/layerManager";
-import {
-  initStack,
-  stackList,
-  stackRoutes,
-  type StackName,
-} from "../stack/stackConfig";
+import { stackManager, type StackManager } from "../stack/stackManager";
+import type { StackName } from "../stack/stackConfig";
 
 type StackContextValue = {
-  stacks: Record<StackName, StackInstance>;
+  stackManager: StackManager;
   activeStack: StackName;
   setActiveStack: (next: StackName) => void;
 };
@@ -30,28 +25,12 @@ type StackScopeValue = {
 
 const StackScopeContext = createContext<StackScopeValue | null>(null);
 
-const createStacks = (): Record<StackName, StackInstance> => {
-  const routes = stackRoutes.map((route) => ({
-    name: route.name,
-    activity: route.activity,
-  }));
-
-  return (Object.keys(stackList) as StackName[]).reduce(
-    (acc, stackName) => {
-      acc[stackName] = createStackflowInstance({
-        stackName,
-        initialActivity: stackList[stackName].initialActivity,
-        routes,
-      });
-      return acc;
-    },
-    {} as Record<StackName, StackInstance>
-  );
-};
-
 export const StackProvider = ({ children }: { children: ReactNode }) => {
-  const stacks = useMemo(() => createStacks(), []);
-  const stackSwitch = useMemo(() => getStackSwitchController(initStack), []);
+  const manager = useMemo(() => stackManager, []);
+  const stackSwitch = useMemo(
+    () => getStackSwitchController(manager.config.initStack),
+    [manager]
+  );
   const activeStack = useSyncExternalStore(
     stackSwitch.subscribe.bind(stackSwitch),
     () => stackSwitch.getState().activeStack as StackName,
@@ -64,11 +43,11 @@ export const StackProvider = ({ children }: { children: ReactNode }) => {
 
   const value = useMemo(
     () => ({
-      stacks,
+      stackManager: manager,
       activeStack,
       setActiveStack,
     }),
-    [activeStack, setActiveStack, stacks]
+    [activeStack, manager, setActiveStack]
   );
 
   return <StackContext.Provider value={value}>{children}</StackContext.Provider>;

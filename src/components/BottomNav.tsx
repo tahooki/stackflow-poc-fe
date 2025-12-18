@@ -1,24 +1,22 @@
 import { useMemo } from "react";
 
 import { useStacks } from "../contexts/StackContext";
-import { stackList, type StackName } from "../stack/stackConfig";
+import type { StackName } from "../stack/stackConfig";
 import { useStackActions } from "../hooks/useStackActions";
 
 import "../assets/bottomNav.css";
 
 export const BottomNav = () => {
-  const { activeStack, setActiveStack } = useStacks();
+  const { activeStack, setActiveStack, stackManager } = useStacks();
   const { push } = useStackActions();
 
   const items = useMemo(() => {
-    const stackItems = (Object.keys(stackList) as StackName[]).map(
-      (stackName) => ({
+    const stackItems = stackManager.getStackNames().map((stackName) => ({
         key: `stack:${stackName}`,
-        label: stackList[stackName].label,
+        label: stackManager.config.stackList[stackName].label,
         isActive: (current: StackName) => current === stackName,
         onClick: () => setActiveStack(stackName),
-      })
-    );
+      }));
 
     const quickItems = [
       {
@@ -37,7 +35,7 @@ export const BottomNav = () => {
     ];
 
     return [...stackItems, ...quickItems];
-  }, [push, setActiveStack]);
+  }, [push, setActiveStack, stackManager]);
 
   return (
     <nav className="bottom-nav" aria-label="Primary">
