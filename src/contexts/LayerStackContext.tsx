@@ -9,8 +9,7 @@ import {
 } from "react";
 
 import type { BackActionResult, LayerState } from "../lib/layerManager";
-import { getLayerController } from "../lib/layerManager";
-import { stackManager } from "../stack/stackManager";
+import { Cfg } from "../config/Cfg";
 import { useStacks } from "./StackContext";
 
 type LayerStackContextValue = {
@@ -23,7 +22,7 @@ const LayerStackContext = createContext<LayerStackContextValue | null>(null);
 export const LayerStackProvider = ({ children }: { children: ReactNode }) => {
   const { activeStack } = useStacks();
   const controller = useMemo(
-    () => getLayerController(activeStack),
+    () => Cfg.getLayer().getController(activeStack),
     [activeStack]
   );
   const [state, setState] = useState<LayerState>(controller.getState());
@@ -35,7 +34,7 @@ export const LayerStackProvider = ({ children }: { children: ReactNode }) => {
   }, [controller]);
 
   const handleBack = useCallback(
-    () => stackManager.handleBackPress(),
+    () => Cfg.getStack().handleBackPress(),
     []
   );
 

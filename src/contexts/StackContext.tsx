@@ -7,7 +7,8 @@ import {
   type ReactNode,
 } from "react";
 
-import { stackManager, type StackManager } from "../stack/stackManager";
+import { Cfg } from "../config/Cfg";
+import type { StackManager } from "../stack/stackManager";
 import type { StackName } from "../stack/stackConfig";
 
 type StackContextValue = {
@@ -25,7 +26,7 @@ type StackScopeValue = {
 const StackScopeContext = createContext<StackScopeValue | null>(null);
 
 export const StackProvider = ({ children }: { children: ReactNode }) => {
-  const manager = useMemo(() => stackManager, []);
+  const manager = useMemo(() => Cfg.getStack(), []);
   const activeStack = useSyncExternalStore(
     manager.subscribeStackSwitch.bind(manager),
     () => manager.getStackSwitchState().activeStack,

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-import { stackManager } from "../stack/stackManager";
+import { Cfg } from "../config/Cfg";
 import { useStacks } from "../contexts/StackContext";
 
 declare global {
@@ -25,7 +25,7 @@ export const useBackKeyBridge = () => {
       console.log("[BackBridge] onBackKeyClick invoked", {
         stack: activeStackRef.current,
       });
-      const result = await stackManager.handleBackPress();
+      const result = await Cfg.getStack().handleBackPress();
       console.log("[BackBridge] layerController result", result);
       const report = window.BRIDGE?.onBackKeyReuslt;
 

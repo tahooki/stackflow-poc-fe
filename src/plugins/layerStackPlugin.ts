@@ -1,12 +1,12 @@
 import type { StackflowReactPlugin } from "@stackflow/react";
 
-import { getLayerController } from "../lib/layerManager";
+import { Cfg } from "../config/Cfg";
 import type { StackName } from "../stack/stackConfig";
 
 export const layerStackPlugin =
   (stackName: StackName): StackflowReactPlugin =>
   () => {
-    const controller = getLayerController(stackName);
+    const controller = Cfg.getLayer().getController(stackName);
 
     return {
       key: `layer-stack-plugin:${stackName}`,

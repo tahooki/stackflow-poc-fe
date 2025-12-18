@@ -1,5 +1,7 @@
 import type { Stack, StackflowActions } from "@stackflow/core";
 
+export type LayerManagerConfig = Record<string, never>;
+
 export type LayerKind = "activity" | "step" | "modal";
 
 export type ActivityLayer = {
@@ -322,15 +324,22 @@ class LayerController {
   }
 }
 
-const controllers = new Map<string, LayerController>();
+export class LayerManager {
+  private controllers = new Map<string, LayerController>();
+  private config: LayerManagerConfig;
 
-export const getLayerController = (stackName: string) => {
-  const existing = controllers.get(stackName);
-  if (existing) {
-    return existing;
+  constructor(config: LayerManagerConfig) {
+    this.config = config;
   }
 
-  const next = new LayerController();
-  controllers.set(stackName, next);
-  return next;
-};
+  getController(stackName: string) {
+    const existing = this.controllers.get(stackName);
+    if (existing) {
+      return existing;
+    }
+
+    const next = new LayerController();
+    this.controllers.set(stackName, next);
+    return next;
+  }
+}

@@ -1,5 +1,4 @@
-import { getLayerController } from "./layerManager";
-import { stackManager } from "../stack/stackManager";
+import { Cfg } from "../config/Cfg";
 
 type ModalInstance = {
   destroy?: () => void;
@@ -63,7 +62,9 @@ export const openLayeredModal = <TModal extends ModalInstance | void>({
   stackName,
 }: OpenLayeredModalOptions<TModal>) => {
   let instance: TModal | null = null;
-  const controller = getLayerController(stackName ?? stackManager.config.initStack);
+  const controller = Cfg.getLayer().getController(
+    stackName ?? Cfg.getStack().config.initStack
+  );
 
   const cleanup = () => {
     controller.unregisterModalLayer(id);

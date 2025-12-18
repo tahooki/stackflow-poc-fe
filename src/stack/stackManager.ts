@@ -1,7 +1,6 @@
 import { createStackflowInstance, type StackInstance } from "../lib/stack/createStackflowInstance";
-import { getLayerController, type BackActionResult } from "../lib/layerManager";
+import type { BackActionResult, LayerManager } from "../lib/layerManager";
 import type { ActivityName, ActivityRegistry, StackName } from "./stackConfig";
-import { stackManagerConfig } from "./stackConfig";
 
 export type StackManagerConfig = {
   initStack: StackName;
@@ -20,14 +19,20 @@ export type StackSwitchState = {
 
 type StackSwitchSubscriber = () => void;
 
+export type StackManagerDeps = {
+  layerManager: LayerManager;
+};
+
 export class StackManager {
   public readonly config: StackManagerConfig;
   public readonly _stackList: Record<StackName, StackInstance>;
+  private layerManager: LayerManager;
   private switchState: StackSwitchState;
   private switchSubscribers = new Set<StackSwitchSubscriber>();
 
-  constructor(config: StackManagerConfig) {
+  constructor(config: StackManagerConfig, deps: StackManagerDeps) {
     this.config = config;
+    this.layerManager = deps.layerManager;
     this._stackList = this.createStacks();
     this.switchState = {
       activeStack: config.initStack,
@@ -80,9 +85,9 @@ export class StackManager {
    * - If the active stack reaches its root (exit), it returns to the previous stack in history.
    */
   async handleBackPress(): Promise<BackActionResult> {
-    const result = await getLayerController(
-      this.switchState.activeStack
-    ).handleBackPress();
+    const result = await this.layerManager
+      .getController(this.switchState.activeStack)
+      .handleBackPress();
 
     if (result.popped !== "exit") {
       return result;
@@ -137,7 +142,3 @@ export class StackManager {
     this.switchSubscribers.forEach((subscriber) => subscriber());
   }
 }
-
-export const stackManager = new StackManager(
-  stackManagerConfig satisfies StackManagerConfig
-);
