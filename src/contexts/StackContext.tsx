@@ -1,12 +1,14 @@
 import {
   createContext,
   useContext,
+  useCallback,
   useMemo,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 
 import { createStackflowInstance, type StackInstance } from "../lib/stack/createStackflowInstance";
+import { getStackSwitchController } from "../lib/layerManager";
 import {
   initStack,
   stackList,
@@ -49,7 +51,16 @@ const createStacks = (): Record<StackName, StackInstance> => {
 
 export const StackProvider = ({ children }: { children: ReactNode }) => {
   const stacks = useMemo(() => createStacks(), []);
-  const [activeStack, setActiveStack] = useState<StackName>(initStack);
+  const stackSwitch = useMemo(() => getStackSwitchController(initStack), []);
+  const activeStack = useSyncExternalStore(
+    stackSwitch.subscribe.bind(stackSwitch),
+    () => stackSwitch.getState().activeStack as StackName,
+    () => stackSwitch.getState().activeStack as StackName
+  );
+  const setActiveStack = useCallback(
+    (next: StackName) => stackSwitch.setActiveStack(next),
+    [stackSwitch]
+  );
 
   const value = useMemo(
     () => ({
@@ -57,7 +68,7 @@ export const StackProvider = ({ children }: { children: ReactNode }) => {
       activeStack,
       setActiveStack,
     }),
-    [activeStack, stacks]
+    [activeStack, setActiveStack, stacks]
   );
 
   return <StackContext.Provider value={value}>{children}</StackContext.Provider>;
@@ -87,4 +98,3 @@ export const useStacks = () => {
 };
 
 export const useOptionalStackScope = () => useContext(StackScopeContext);
-

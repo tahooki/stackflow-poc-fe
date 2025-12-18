@@ -45,6 +45,7 @@ export type BackActionResult =
   | { popped: "modal"; targetId: string }
   | { popped: "step"; targetId: string }
   | { popped: "activity"; targetId: string }
+  | { popped: "stack"; targetId: string }
   | { popped: "exit" }
   | { popped: "none" };
 
@@ -332,4 +333,84 @@ export const getLayerController = (stackName: string) => {
   const next = new LayerController();
   controllers.set(stackName, next);
   return next;
+};
+
+type StackSwitchState = {
+  activeStack: string;
+  lastStackUpdateAt: number | null;
+};
+
+type StackSwitchListener = (state: StackSwitchState) => void;
+
+class StackSwitchController {
+  private state: StackSwitchState;
+  private listeners = new Set<StackSwitchListener>();
+  private initialStack: string;
+
+  constructor(initialStack: string) {
+    this.initialStack = initialStack;
+    this.state = {
+      activeStack: initialStack,
+      lastStackUpdateAt: null,
+    };
+  }
+
+  subscribe(listener: StackSwitchListener) {
+    this.listeners.add(listener);
+    listener(this.state);
+
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  getState() {
+    return this.state;
+  }
+
+  setActiveStack(nextStack: string) {
+    if (!nextStack || nextStack === this.state.activeStack) {
+      return;
+    }
+
+    this.state = {
+      activeStack: nextStack,
+      lastStackUpdateAt: Date.now(),
+    };
+    this.emit();
+  }
+
+  async handleBackPress(): Promise<BackActionResult> {
+    const result = await getLayerController(this.state.activeStack).handleBackPress();
+
+    if (result.popped === "exit" && this.state.activeStack !== this.initialStack) {
+      const nextStack = this.initialStack;
+      this.state = {
+        activeStack: nextStack,
+        lastStackUpdateAt: Date.now(),
+      };
+      this.emit();
+      return { popped: "stack", targetId: nextStack };
+    }
+
+    return result;
+  }
+
+  private emit() {
+    this.listeners.forEach((listener) => listener(this.state));
+  }
+}
+
+let stackSwitchController: StackSwitchController | null = null;
+
+export const getStackSwitchController = (initialStack?: string) => {
+  if (!stackSwitchController) {
+    if (!initialStack) {
+      throw new Error(
+        "getStackSwitchController requires an initial stack on first call."
+      );
+    }
+    stackSwitchController = new StackSwitchController(initialStack);
+  }
+  return stackSwitchController;
 };

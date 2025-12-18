@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -8,7 +9,7 @@ import {
 } from "react";
 
 import type { BackActionResult, LayerState } from "../lib/layerManager";
-import { getLayerController } from "../lib/layerManager";
+import { getLayerController, getStackSwitchController } from "../lib/layerManager";
 import { useStacks } from "./StackContext";
 
 type LayerStackContextValue = {
@@ -32,12 +33,17 @@ export const LayerStackProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, [controller]);
 
+  const handleBack = useCallback(
+    () => getStackSwitchController().handleBackPress(),
+    []
+  );
+
   const value = useMemo(
     () => ({
       state,
-      handleBack: () => controller.handleBackPress(),
+      handleBack,
     }),
-    [controller, state]
+    [handleBack, state]
   );
 
   return (
