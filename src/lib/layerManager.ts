@@ -337,6 +337,7 @@ export const getLayerController = (stackName: string) => {
 
 type StackSwitchState = {
   activeStack: string;
+  stackHistory: string[];
   lastStackUpdateAt: number | null;
 };
 
@@ -351,13 +352,13 @@ class StackSwitchController {
     this.initialStack = initialStack;
     this.state = {
       activeStack: initialStack,
+      stackHistory: [],
       lastStackUpdateAt: null,
     };
   }
 
   subscribe(listener: StackSwitchListener) {
     this.listeners.add(listener);
-    listener(this.state);
 
     return () => {
       this.listeners.delete(listener);
@@ -368,25 +369,50 @@ class StackSwitchController {
     return this.state;
   }
 
-  setActiveStack(nextStack: string) {
+  setActiveStack(nextStack: string, options?: { recordHistory?: boolean }) {
     if (!nextStack || nextStack === this.state.activeStack) {
       return;
     }
 
+    const recordHistory = options?.recordHistory !== false;
+    const nextHistory = recordHistory
+      ? [...this.state.stackHistory, this.state.activeStack]
+      : this.state.stackHistory;
+
     this.state = {
       activeStack: nextStack,
+      stackHistory: nextHistory,
       lastStackUpdateAt: Date.now(),
     };
     this.emit();
   }
 
   async handleBackPress(): Promise<BackActionResult> {
-    const result = await getLayerController(this.state.activeStack).handleBackPress();
+    const result = await getLayerController(
+      this.state.activeStack
+    ).handleBackPress();
 
-    if (result.popped === "exit" && this.state.activeStack !== this.initialStack) {
+    if (result.popped !== "exit") {
+      return result;
+    }
+
+    const historyCount = this.state.stackHistory.length;
+    if (historyCount > 0) {
+      const nextStack = this.state.stackHistory[historyCount - 1]!;
+      this.state = {
+        activeStack: nextStack,
+        stackHistory: this.state.stackHistory.slice(0, -1),
+        lastStackUpdateAt: Date.now(),
+      };
+      this.emit();
+      return { popped: "stack", targetId: nextStack };
+    }
+
+    if (this.state.activeStack !== this.initialStack) {
       const nextStack = this.initialStack;
       this.state = {
         activeStack: nextStack,
+        stackHistory: [],
         lastStackUpdateAt: Date.now(),
       };
       this.emit();
