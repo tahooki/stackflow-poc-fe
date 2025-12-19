@@ -30,6 +30,8 @@ export const LayerStackDevtools = () => {
     () => state.frames.map((frame, index) => ({ ...frame, index })),
     [state.frames]
   );
+  const isOverlayKind = (kind: string) =>
+    kind === "modal" || kind === "drawer" || kind === "actionSheet";
 
   return (
     <div style={containerStyle}>
@@ -67,7 +69,7 @@ export const LayerStackDevtools = () => {
                   marginBottom: 4,
                   borderRadius: 6,
                   background:
-                    frame.kind === "modal"
+                    isOverlayKind(frame.kind)
                       ? "rgba(56, 189, 248, 0.12)"
                       : frame.kind === "step"
                       ? "rgba(168, 85, 247, 0.14)"

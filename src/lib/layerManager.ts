@@ -1,8 +1,7 @@
-import type { Stack, StackflowActions } from "@stackflow/core";
-
 export type LayerManagerConfig = Record<string, never>;
 
-export type LayerKind = "activity" | "step" | "modal";
+export type LayerKind = "activity" | "step" | "modal" | "drawer" | "actionSheet";
+export type OverlayKind = Exclude<LayerKind, "activity" | "step">;
 
 export type ActivityLayer = {
   kind: "activity";
@@ -13,6 +12,9 @@ export type ActivityLayer = {
   isRoot: boolean;
   isActive: boolean;
   params: Record<string, string | undefined>;
+  exitedBy?: string | null;
+  order?: number;
+  onClose?: () => void;
 };
 
 export type StepLayer = {
@@ -21,19 +23,22 @@ export type StepLayer = {
   activityId: string;
   hasZIndex?: boolean;
   zIndex: number;
+  order?: number;
+  onClose?: () => void;
 };
 
-export type ModalLayer = {
-  kind: "modal";
+export type OverlayLayer = {
+  kind: OverlayKind;
   id: string;
   activityId?: string;
   label?: string;
   openedAt: number;
   persistAcrossActivities?: boolean;
+  order?: number;
   onClose?: () => void;
 };
 
-export type LayerFrame = ActivityLayer | StepLayer | ModalLayer;
+export type LayerFrame = ActivityLayer | StepLayer | OverlayLayer;
 
 export type LayerState = {
   frames: LayerFrame[];
@@ -45,17 +50,24 @@ export type LayerState = {
 
 export type BackActionResult =
   | { popped: "modal"; targetId: string }
+  | { popped: "drawer"; targetId: string }
+  | { popped: "actionSheet"; targetId: string }
   | { popped: "step"; targetId: string }
   | { popped: "activity"; targetId: string }
   | { popped: "stack"; targetId: string }
   | { popped: "exit" }
   | { popped: "none" };
 
-type ModalRegistration = Omit<ModalLayer, "kind" | "openedAt"> & {
+type OverlayRegistration = Omit<OverlayLayer, "openedAt"> & {
   openedAt?: number;
 };
 
+export type LayerRegistration = ActivityLayer | StepLayer | OverlayRegistration;
+
 type Listener = (state: LayerState) => void;
+
+const overlayKinds = new Set<LayerKind>(["modal", "drawer", "actionSheet"]);
+const overlayOrderBase = 1_000_000_000_000;
 
 const emptyState: LayerState = {
   frames: [],
@@ -65,106 +77,95 @@ const emptyState: LayerState = {
   lastStackUpdateAt: null,
 };
 
-const sortByOpenedAt = (left: ModalLayer, right: ModalLayer) =>
-  left.openedAt - right.openedAt;
+const isOverlayKind = (kind: LayerKind): kind is OverlayKind =>
+  overlayKinds.has(kind);
+
+const getLayerOrder = (layer: LayerFrame) => {
+  const base = isOverlayKind(layer.kind) ? overlayOrderBase : 0;
+
+  if (typeof layer.order === "number") {
+    return base + layer.order;
+  }
+
+  if (isOverlayKind(layer.kind)) {
+    return base + layer.openedAt;
+  }
+
+  return base + layer.zIndex;
+};
 
 class LayerController {
-  private actions: StackflowActions | null = null;
-  private lastStack: Stack | null = null;
+  private layers = new Map<string, LayerFrame>();
+  private groups = new Map<string, Set<string>>();
   private listeners = new Set<Listener>();
-  private modalRegistry = new Map<string, ModalLayer>();
   private state: LayerState = emptyState;
   private handlingBack = false;
 
-  attach(actions: StackflowActions) {
-    this.actions = actions;
-    console.log("[LayerController] attach actions");
-    this.syncFromStack(actions.getStack());
+  registerLayer(layer: LayerRegistration, options?: { group?: string }) {
+    const normalized = this.normalizeLayer(layer);
+    this.layers.set(normalized.id, normalized);
+    this.assignGroup(normalized.id, options?.group);
+    this.refreshState();
   }
 
-  syncFromStack(stack: Stack) {
-    this.lastStack = stack;
-    this.pruneOrphanedModals(stack);
+  setGroupLayers(group: string, layers: LayerRegistration[]) {
+    const nextIds = new Set(layers.map((layer) => layer.id));
+    const existingIds = this.groups.get(group);
 
-    const frames: LayerFrame[] = [];
-    let stepCount = 0;
+    if (existingIds) {
+      for (const id of existingIds) {
+        if (!nextIds.has(id)) {
+          this.layers.delete(id);
+          this.removeFromGroups(id);
+        }
+      }
+    }
 
-    stack.activities.forEach((activity) => {
-      frames.push({
-        kind: "activity",
-        id: activity.id,
-        name: activity.name,
-        params: activity.params,
-        isTop: activity.isTop,
-        isRoot: activity.isRoot,
-        isActive: activity.isActive,
-        zIndex: activity.zIndex,
-      });
-
-      activity.steps.forEach((step) => {
-        frames.push({
-          kind: "step",
-          id: step.id,
-          activityId: activity.id,
-          hasZIndex: step.hasZIndex,
-          zIndex: step.zIndex,
-        });
-        stepCount += 1;
-      });
+    const nextGroup = new Set<string>();
+    layers.forEach((layer) => {
+      const normalized = this.normalizeLayer(layer);
+      this.layers.set(normalized.id, normalized);
+      this.removeFromGroups(normalized.id);
+      nextGroup.add(normalized.id);
     });
 
-    const modalFrames = Array.from(this.modalRegistry.values()).sort(
-      sortByOpenedAt
-    );
-    frames.push(...modalFrames);
+    if (nextGroup.size > 0) {
+      this.groups.set(group, nextGroup);
+    } else {
+      this.groups.delete(group);
+    }
 
-    this.state = {
-      frames,
-      activityCount: stack.activities.length,
-      modalCount: modalFrames.length,
-      stepCount,
-      lastStackUpdateAt: Date.now(),
-    };
-
-    console.log(
-      "[LayerController] syncFromStack",
-      `activities=${stack.activities.length}`,
-      `steps=${stepCount}`,
-      `modals=${modalFrames.length}`
-    );
-
-    this.emit();
+    this.refreshState();
   }
 
-  registerModalLayer(modal: ModalRegistration) {
-    const openedAt =
-      modal.openedAt ??
-      this.modalRegistry.get(modal.id)?.openedAt ??
-      Date.now();
-
-    this.modalRegistry.set(modal.id, {
-      ...modal,
-      openedAt,
-      kind: "modal",
-    });
-
-    console.log("[LayerController] registerModal", modal.id, {
-      activityId: modal.activityId,
-      persistAcrossActivities: modal.persistAcrossActivities,
-    });
-
-    if (this.lastStack) {
-      this.syncFromStack(this.lastStack);
+  unregisterLayer(layerId: string) {
+    if (this.layers.delete(layerId)) {
+      this.removeFromGroups(layerId);
+      this.refreshState();
     }
   }
 
-  unregisterModalLayer(modalId: string) {
-    if (this.modalRegistry.has(modalId)) {
-      this.modalRegistry.delete(modalId);
-      console.log("[LayerController] unregisterModal", modalId);
-      if (this.lastStack) {
-        this.syncFromStack(this.lastStack);
+  pruneOrphanedOverlays(activeActivityIds: Set<string>) {
+    let mutated = false;
+
+    for (const [layerId, layer] of Array.from(this.layers.entries())) {
+      if (!isOverlayKind(layer.kind)) {
+        continue;
       }
+
+      const hasOwner = layer.activityId
+        ? activeActivityIds.has(layer.activityId)
+        : true;
+
+      if (!hasOwner && !layer.persistAcrossActivities) {
+        this.layers.delete(layerId);
+        this.removeFromGroups(layerId);
+        mutated = true;
+      }
+    }
+
+    if (mutated) {
+      this.refreshState();
     }
   }
 
@@ -181,41 +182,32 @@ class LayerController {
     return this.state;
   }
 
-  async handleBackPress(): Promise<BackActionResult> {
+  async popTopLayer(): Promise<BackActionResult> {
     if (this.handlingBack) {
-      console.log("[LayerController] handleBackPress skipped (handling)");
+      console.log("[LayerController] popTopLayer skipped (handling)");
       return { popped: "none" };
     }
 
     this.handlingBack = true;
     try {
-      console.log("[LayerController] handleBackPress start");
-      const actions = this.actions;
-      const stack = actions?.getStack() ?? this.lastStack;
-      const topActivity = this.getTopActivity(stack);
+      console.log("[LayerController] popTopLayer start");
+      const topActivity = this.getTopActivity();
+      const topOverlay = this.getTopOverlayForActivity(topActivity?.id);
 
-      const topModal = this.getTopModalForActivity(topActivity?.id);
-      if (topModal) {
-        console.log("[LayerController] popping modal", topModal.id, {
-          modalActivityId: topModal.activityId,
+      if (topOverlay) {
+        console.log("[LayerController] popping overlay", topOverlay.id, {
+          kind: topOverlay.kind,
+          modalActivityId: topOverlay.activityId,
           topActivityId: topActivity?.id,
         });
-        this.unregisterModalLayer(topModal.id);
-        topModal.onClose?.();
+        this.unregisterLayer(topOverlay.id);
+        topOverlay.onClose?.();
         const result: BackActionResult = {
-          popped: "modal",
-          targetId: topModal.id,
+          popped: topOverlay.kind,
+          targetId: topOverlay.id,
         };
         console.log("[LayerController] back result", result);
         return result;
-      }
-
-      if (!actions || !stack) {
-        console.log("[LayerController] no actions/stack", {
-          hasActions: Boolean(actions),
-          hasStack: Boolean(stack),
-        });
-        return { popped: "none" };
       }
 
       if (!topActivity) {
@@ -228,19 +220,12 @@ class LayerController {
       console.log("[LayerController] topActivity", topActivity.id, {
         name: topActivity.name,
         isRoot: topActivity.isRoot,
-        stepCount: topActivity.steps.length,
       });
 
-      const stepCount = topActivity.steps.length;
-      const topStep =
-        stepCount > 1 ? topActivity.steps[topActivity.steps.length - 1] : null;
+      const topStep = this.getTopStepForActivity(topActivity.id);
       if (topStep) {
-        console.log("[LayerController] popping step", topStep.id, {
-          stepCount,
-        });
-        actions.stepPop({
-          targetActivityId: topActivity.id,
-        });
+        console.log("[LayerController] popping step", topStep.id);
+        topStep.onClose?.();
         const result: BackActionResult = {
           popped: "step",
           targetId: topStep.id,
@@ -251,7 +236,7 @@ class LayerController {
 
       if (!topActivity.isRoot) {
         console.log("[LayerController] popping activity", topActivity.id);
-        actions.pop();
+        topActivity.onClose?.();
         const result: BackActionResult = {
           popped: "activity",
           targetId: topActivity.id,
@@ -269,31 +254,68 @@ class LayerController {
     }
   }
 
-  private getTopModalForActivity(activityId?: string) {
-    const modals = Array.from(this.modalRegistry.values()).sort(sortByOpenedAt);
+  private refreshState() {
+    const frames = Array.from(this.layers.values()).sort(
+      (left, right) => getLayerOrder(left) - getLayerOrder(right)
+    );
+    this.state = {
+      frames,
+      activityCount: frames.filter((frame) => frame.kind === "activity").length,
+      modalCount: frames.filter((frame) => isOverlayKind(frame.kind)).length,
+      stepCount: frames.filter((frame) => frame.kind === "step").length,
+      lastStackUpdateAt: Date.now(),
+    };
+    this.emit();
+  }
 
-    for (let i = modals.length - 1; i >= 0; i -= 1) {
-      const modal = modals[i];
-      if (!activityId || !modal.activityId || modal.activityId === activityId) {
-        return modal;
+  private normalizeLayer(layer: LayerRegistration): LayerFrame {
+    if (!isOverlayKind(layer.kind)) {
+      return layer;
+    }
+
+    const existing = this.layers.get(layer.id);
+    const openedAt =
+      layer.openedAt ??
+      (existing && isOverlayKind(existing.kind) ? existing.openedAt : undefined) ??
+      Date.now();
+
+    return {
+      ...layer,
+      openedAt,
+    };
+  }
+
+  private getTopOverlayForActivity(activityId?: string) {
+    let topOverlay: OverlayLayer | undefined;
+
+    for (const layer of this.layers.values()) {
+      if (!isOverlayKind(layer.kind)) {
+        continue;
+      }
+
+      if (activityId && layer.activityId && layer.activityId !== activityId) {
+        continue;
+      }
+
+      if (!topOverlay || layer.openedAt >= topOverlay.openedAt) {
+        topOverlay = layer;
       }
     }
 
-    return undefined;
+    return topOverlay;
   }
 
-  private getTopActivity(stack: Stack | null) {
-    if (!stack) {
-      return undefined;
-    }
+  private getTopActivity() {
+    const activities = Array.from(this.layers.values()).filter(
+      (layer): layer is ActivityLayer => layer.kind === "activity"
+    );
 
-    const flaggedTop = stack.activities.find((activity) => activity.isTop);
+    const flaggedTop = activities.find((activity) => activity.isTop);
     if (flaggedTop) {
       return flaggedTop;
     }
 
-    // Fallback: pick the highest z-index activity that hasn't exited.
-    const visible = stack.activities.filter((activity) => !activity.exitedBy);
+    const visible = activities.filter((activity) => !activity.exitedBy);
     if (visible.length === 0) {
       return undefined;
     }
@@ -303,22 +325,43 @@ class LayerController {
     );
   }
 
+  private getTopStepForActivity(activityId: string) {
+    const steps = Array.from(this.layers.values()).filter(
+      (layer): layer is StepLayer =>
+        layer.kind === "step" && layer.activityId === activityId
+    );
+
+    if (steps.length <= 1) {
+      return undefined;
+    }
+
+    return steps.reduce((current, candidate) =>
+      candidate.zIndex >= current.zIndex ? candidate : current
+    );
+  }
+
   private emit() {
     this.listeners.forEach((listener) => listener(this.state));
   }
 
-  private pruneOrphanedModals(stack: Stack) {
-    const activeActivityIds = new Set(
-      stack.activities.map((activity) => activity.id)
-    );
+  private assignGroup(layerId: string, group?: string) {
+    this.removeFromGroups(layerId);
+    if (!group) {
+      return;
+    }
 
-    for (const [modalId, modal] of Array.from(this.modalRegistry.entries())) {
-      const hasOwner = modal.activityId
-        ? activeActivityIds.has(modal.activityId)
-        : true;
+    let ids = this.groups.get(group);
+    if (!ids) {
+      ids = new Set<string>();
+      this.groups.set(group, ids);
+    }
+    ids.add(layerId);
+  }
 
-      if (!hasOwner && !modal.persistAcrossActivities) {
-        this.modalRegistry.delete(modalId);
+  private removeFromGroups(layerId: string) {
+    for (const [group, ids] of this.groups.entries()) {
+      if (ids.delete(layerId) && ids.size === 0) {
+        this.groups.delete(group);
       }
     }
   }
@@ -330,6 +373,10 @@ export class LayerManager {
 
   constructor(config: LayerManagerConfig) {
     this.config = config;
+  }
+
+  getConfig() {
+    return this.config;
   }
 
   getController(stackName: string) {

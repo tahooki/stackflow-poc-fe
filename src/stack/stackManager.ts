@@ -87,7 +87,7 @@ export class StackManager {
   async handleBackPress(): Promise<BackActionResult> {
     const result = await this.layerManager
       .getController(this.switchState.activeStack)
-      .handleBackPress();
+      .popTopLayer();
 
     if (result.popped !== "exit") {
       return result;

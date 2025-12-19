@@ -3,6 +3,7 @@ import { useActivity } from "@stackflow/react";
 
 import { useOptionalStackScope, useStacks } from "../contexts/StackContext";
 import { Cfg } from "../config/Cfg";
+import type { OverlayKind } from "../lib/layerManager";
 
 export type UseModalLayerOptions = {
   id?: string;
@@ -10,6 +11,7 @@ export type UseModalLayerOptions = {
   isOpen: boolean;
   persistAcrossActivities?: boolean;
   onClose?: () => void;
+  kind?: OverlayKind;
 };
 
 export const useModalLayer = ({
@@ -18,6 +20,7 @@ export const useModalLayer = ({
   isOpen,
   persistAcrossActivities,
   onClose,
+  kind = "modal",
 }: UseModalLayerOptions) => {
   const activity = useActivity();
   const { activeStack } = useStacks();
@@ -27,7 +30,8 @@ export const useModalLayer = ({
 
   useEffect(() => {
     if (isOpen) {
-      controller.registerModalLayer({
+      controller.registerLayer({
+        kind,
         id: modalId,
         activityId: activity.id,
         label,
@@ -36,16 +40,17 @@ export const useModalLayer = ({
       });
 
       return () => {
-        controller.unregisterModalLayer(modalId);
+        controller.unregisterLayer(modalId);
       };
     }
 
-    controller.unregisterModalLayer(modalId);
+    controller.unregisterLayer(modalId);
     return undefined;
   }, [
     activity.id,
     controller,
     isOpen,
+    kind,
     label,
     modalId,
     onClose,

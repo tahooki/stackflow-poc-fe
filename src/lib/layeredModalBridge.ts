@@ -1,4 +1,5 @@
 import { Cfg } from "../config/Cfg";
+import type { OverlayKind } from "./layerManager";
 
 type ModalInstance = {
   destroy?: () => void;
@@ -14,6 +15,10 @@ export type OpenLayeredModalOptions<TModal extends ModalInstance | void> = {
    * 디버그/Devtools에 표시할 라벨
    */
   label?: string;
+  /**
+   * 오버레이 타입 (modal/drawer/actionSheet)
+   */
+  kind?: OverlayKind;
   /**
    * 액티비티 전환 시에도 남겨둘지 여부
    */
@@ -56,6 +61,7 @@ export type OpenLayeredModalOptions<TModal extends ModalInstance | void> = {
 export const openLayeredModal = <TModal extends ModalInstance | void>({
   id,
   label,
+  kind = "modal",
   persistAcrossActivities,
   openModal,
   onClose,
@@ -67,14 +73,15 @@ export const openLayeredModal = <TModal extends ModalInstance | void>({
   );
 
   const cleanup = () => {
-    controller.unregisterModalLayer(id);
+    controller.unregisterLayer(id);
     onClose?.();
     const modal = instance as ModalInstance | null;
     modal?.destroy?.();
     modal?.close?.();
   };
 
-  controller.registerModalLayer({
+  controller.registerLayer({
+    kind,
     id,
     label,
     persistAcrossActivities,
