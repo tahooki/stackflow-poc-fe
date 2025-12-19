@@ -109,10 +109,33 @@ class LayerController {
     const normalized = this.normalizeLayer(layer);
     this.layers.set(normalized.id, normalized);
     this.assignGroup(normalized.id, options?.group);
+    console.log("[LayerController] registerLayer", {
+      kind: normalized.kind,
+      id: normalized.id,
+      activityId: "activityId" in normalized ? normalized.activityId : undefined,
+      group: options?.group ?? null,
+    });
     this.refreshState();
   }
 
   setGroupLayers(group: string, layers: LayerRegistration[]) {
+    const summary = layers.reduce(
+      (acc, layer) => {
+        acc.total += 1;
+        acc[layer.kind] = (acc[layer.kind] ?? 0) + 1;
+        return acc;
+      },
+      { total: 0 } as Record<string, number>
+    );
+    console.log("[LayerController] setGroupLayers", {
+      group,
+      total: summary.total,
+      activity: summary.activity ?? 0,
+      step: summary.step ?? 0,
+      modal: summary.modal ?? 0,
+      drawer: summary.drawer ?? 0,
+      actionSheet: summary.actionSheet ?? 0,
+    });
     const nextIds = new Set(layers.map((layer) => layer.id));
     const existingIds = this.groups.get(group);
 
@@ -145,6 +168,7 @@ class LayerController {
   unregisterLayer(layerId: string) {
     if (this.layers.delete(layerId)) {
       this.removeFromGroups(layerId);
+      console.log("[LayerController] unregisterLayer", { id: layerId });
       this.refreshState();
     }
   }
@@ -269,6 +293,12 @@ class LayerController {
       stepCount: frames.filter((frame) => frame.kind === "step").length,
       lastStackUpdateAt: Date.now(),
     };
+    console.log("[LayerController] refreshState", {
+      total: frames.length,
+      activity: this.state.activityCount,
+      step: this.state.stepCount,
+      modal: this.state.modalCount,
+    });
     this.emit();
   }
 

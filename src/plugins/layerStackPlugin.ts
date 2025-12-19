@@ -57,6 +57,11 @@ export const layerStackPlugin =
       key: `layer-stack-plugin:${stackName}`,
       onInit: ({ actions }) => {
         const stack = actions.getStack();
+        console.log("[layerStackPlugin] onInit", {
+          stackName,
+          activityCount: stack.activities.length,
+          topActivityId: stack.activities[stack.activities.length - 1]?.id ?? null,
+        });
         controller.setGroupLayers("stack", buildStackLayers(stack, actions));
         controller.pruneOrphanedOverlays(
           new Set(stack.activities.map((activity) => activity.id))
@@ -64,6 +69,11 @@ export const layerStackPlugin =
       },
       onChanged: ({ actions }) => {
         const stack = actions.getStack();
+        console.log("[layerStackPlugin] onChanged", {
+          stackName,
+          activityCount: stack.activities.length,
+          topActivityId: stack.activities[stack.activities.length - 1]?.id ?? null,
+        });
         controller.setGroupLayers("stack", buildStackLayers(stack, actions));
         controller.pruneOrphanedOverlays(
           new Set(stack.activities.map((activity) => activity.id))
