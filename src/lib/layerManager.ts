@@ -80,6 +80,10 @@ const emptyState: LayerState = {
 const isOverlayKind = (kind: LayerKind): kind is OverlayKind =>
   overlayKinds.has(kind);
 
+const isOverlayLayer = (
+  layer: LayerFrame | LayerRegistration
+): layer is OverlayLayer | OverlayRegistration => isOverlayKind(layer.kind);
+
 const getLayerOrder = (layer: LayerFrame) => {
   const base = isOverlayKind(layer.kind) ? overlayOrderBase : 0;
 
@@ -87,8 +91,8 @@ const getLayerOrder = (layer: LayerFrame) => {
     return base + layer.order;
   }
 
-  if (isOverlayKind(layer.kind)) {
-    return base + layer.openedAt;
+  if (isOverlayLayer(layer)) {
+    return base + (layer.openedAt ?? 0);
   }
 
   return base + layer.zIndex;
@@ -149,7 +153,7 @@ class LayerController {
     let mutated = false;
 
     for (const [layerId, layer] of Array.from(this.layers.entries())) {
-      if (!isOverlayKind(layer.kind)) {
+      if (!isOverlayLayer(layer)) {
         continue;
       }
 
@@ -269,14 +273,14 @@ class LayerController {
   }
 
   private normalizeLayer(layer: LayerRegistration): LayerFrame {
-    if (!isOverlayKind(layer.kind)) {
+    if (!isOverlayLayer(layer)) {
       return layer;
     }
 
     const existing = this.layers.get(layer.id);
     const openedAt =
       layer.openedAt ??
-      (existing && isOverlayKind(existing.kind) ? existing.openedAt : undefined) ??
+      (existing && isOverlayLayer(existing) ? existing.openedAt : undefined) ??
       Date.now();
 
     return {
@@ -289,7 +293,7 @@ class LayerController {
     let topOverlay: OverlayLayer | undefined;
 
     for (const layer of this.layers.values()) {
-      if (!isOverlayKind(layer.kind)) {
+      if (!isOverlayLayer(layer)) {
         continue;
       }
 
