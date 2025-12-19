@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { BackBridgeButton } from "./components/BackBridgeButton";
 import { BottomNav } from "./components/BottomNav";
 import { LayerStackDevtools } from "./components/LayerStackDevtools";
-import { StackViewport } from "./components/StackViewport";
 import { Cfg } from "./config/Cfg";
 import { LayerStackProvider } from "./contexts/LayerStackContext";
 import { StackProvider } from "./contexts/StackContext";
@@ -21,12 +20,9 @@ const AppShell = () => {
 
   return (
     <LayerStackProvider>
-      <GlobalLayout>
-        <StackViewport />
-        <BottomNav />
-        <LayerStackDevtools />
-        <BackBridgeButton />
-      </GlobalLayout>
+      <BottomNav />
+      <LayerStackDevtools />
+      <BackBridgeButton />
     </LayerStackProvider>
   );
 };
@@ -49,9 +45,11 @@ function App() {
   }
 
   return (
-    <StackProvider>
-      <AppShell />
-    </StackProvider>
+    <GlobalLayout>
+      <StackProvider>
+        <AppShell />
+      </StackProvider>
+    </GlobalLayout>
   );
 }
 

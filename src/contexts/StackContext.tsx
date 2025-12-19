@@ -11,6 +11,8 @@ import { Cfg } from "../config/Cfg";
 import type { StackManager } from "../stack/stackManager";
 import type { StackName } from "../stack/stackConfig";
 
+import "../assets/stackViewport.css";
+
 type StackContextValue = {
   stackManager: StackManager;
   activeStack: StackName;
@@ -46,7 +48,33 @@ export const StackProvider = ({ children }: { children: ReactNode }) => {
     [activeStack, manager, setActiveStack]
   );
 
-  return <StackContext.Provider value={value}>{children}</StackContext.Provider>;
+  return (
+    <StackContext.Provider value={value}>
+      <div className="stack-viewport" data-active-stack={activeStack}>
+        {manager.getStackNames().map((stackName: StackName) => {
+          const StackComponent = manager.getStack(stackName).Stack;
+          const isActive = stackName === activeStack;
+
+          return (
+            <div
+              key={stackName}
+              className={[
+                "stack-viewport__stack",
+                isActive ? "stack-viewport__stack--active" : null,
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <StackScopeProvider stackName={stackName}>
+                <StackComponent />
+              </StackScopeProvider>
+            </div>
+          );
+        })}
+      </div>
+      {children}
+    </StackContext.Provider>
+  );
 };
 
 export const StackScopeProvider = ({
