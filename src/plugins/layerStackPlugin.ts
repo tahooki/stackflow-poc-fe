@@ -13,6 +13,9 @@ const buildStackLayers = (
   let order = 0;
 
   stack.activities.forEach((activity) => {
+    if (activity.transitionState === "exit-done") {
+      return;
+    }
     layers.push({
       kind: "activity",
       id: activity.id,
@@ -28,10 +31,13 @@ const buildStackLayers = (
     });
     order += 1;
 
-    activity.steps.forEach((step) => {
+    const stepLayers =
+      activity.steps.length > 1 ? activity.steps.slice(1) : [];
+
+    stepLayers.forEach((step) => {
       layers.push({
         kind: "step",
-        id: step.id,
+        id: `step:${activity.id}:${step.id}`,
         activityId: activity.id,
         hasZIndex: step.hasZIndex,
         zIndex: step.zIndex,

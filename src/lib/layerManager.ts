@@ -365,7 +365,7 @@ class LayerController {
         layer.kind === "step" && layer.activityId === activityId
     );
 
-    if (steps.length <= 1) {
+    if (steps.length === 0) {
       return undefined;
     }
 
