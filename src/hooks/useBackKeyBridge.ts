@@ -25,7 +25,7 @@ export const useBackKeyBridge = () => {
       console.log("[BackBridge] onBackKeyClick invoked", {
         stack: activeStackRef.current,
       });
-      const result = await Cfg.getStack().handleBackPress();
+      const result = await Cfg.getBack().handleBackPress();
       console.log("[BackBridge] layerController result", result);
       const report = window.BRIDGE?.onBackKeyReuslt;
 

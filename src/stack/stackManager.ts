@@ -1,5 +1,4 @@
 import { createStackflowInstance, type StackInstance } from "../lib/stack/createStackflowInstance";
-import type { BackActionResult, LayerManager } from "../lib/layerManager";
 import type { ActivityName, ActivityRegistry, StackName } from "./stackConfig";
 
 export type StackManagerConfig = {
@@ -19,20 +18,14 @@ export type StackSwitchState = {
 
 type StackSwitchSubscriber = () => void;
 
-export type StackManagerDeps = {
-  layerManager: LayerManager;
-};
-
 export class StackManager {
   public readonly config: StackManagerConfig;
   public readonly _stackList: Record<StackName, StackInstance>;
-  private layerManager: LayerManager;
   private switchState: StackSwitchState;
   private switchSubscribers = new Set<StackSwitchSubscriber>();
 
-  constructor(config: StackManagerConfig, deps: StackManagerDeps) {
+  constructor(config: StackManagerConfig) {
     this.config = config;
-    this.layerManager = deps.layerManager;
     this._stackList = this.createStacks();
     this.switchState = {
       activeStack: config.initStack,
@@ -79,44 +72,34 @@ export class StackManager {
     this.emitStackSwitch();
   }
 
-  /**
-   * Handles back across layers (modal/step/activity) and stacks.
-   * - First delegates to the active stack's LayerController.
-   * - If the active stack reaches its root (exit), it returns to the previous stack in history.
-   */
-  async handleBackPress(): Promise<BackActionResult> {
-    const result = await this.layerManager
-      .getController(this.switchState.activeStack)
-      .popTopLayer();
-
-    if (result.popped !== "exit") {
-      return result;
-    }
-
+  popStackHistory(): StackName | null {
     const historyCount = this.switchState.stackHistory.length;
-    if (historyCount > 0) {
-      const nextStack = this.switchState.stackHistory[historyCount - 1]!;
-      this.switchState = {
-        activeStack: nextStack,
-        stackHistory: this.switchState.stackHistory.slice(0, -1),
-        lastStackUpdateAt: Date.now(),
-      };
-      this.emitStackSwitch();
-      return { popped: "stack", targetId: nextStack };
+    if (historyCount === 0) {
+      return null;
     }
 
-    if (this.switchState.activeStack !== this.config.initStack) {
-      const nextStack = this.config.initStack;
-      this.switchState = {
-        activeStack: nextStack,
-        stackHistory: [],
-        lastStackUpdateAt: Date.now(),
-      };
-      this.emitStackSwitch();
-      return { popped: "stack", targetId: nextStack };
+    const nextStack = this.switchState.stackHistory[historyCount - 1]!;
+    this.switchState = {
+      activeStack: nextStack,
+      stackHistory: this.switchState.stackHistory.slice(0, -1),
+      lastStackUpdateAt: Date.now(),
+    };
+    this.emitStackSwitch();
+    return nextStack;
+  }
+
+  resetToInitStack(): StackName | null {
+    if (this.switchState.activeStack === this.config.initStack) {
+      return null;
     }
 
-    return result;
+    this.switchState = {
+      activeStack: this.config.initStack,
+      stackHistory: [],
+      lastStackUpdateAt: Date.now(),
+    };
+    this.emitStackSwitch();
+    return this.config.initStack;
   }
 
   private createStacks(): Record<StackName, StackInstance> {

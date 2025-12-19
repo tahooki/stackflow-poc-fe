@@ -33,10 +33,7 @@ export const LayerStackProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, [controller]);
 
-  const handleBack = useCallback(
-    () => Cfg.getStack().handleBackPress(),
-    []
-  );
+  const handleBack = useCallback(() => Cfg.getBack().handleBackPress(), []);
 
   const value = useMemo(
     () => ({
