@@ -1,13 +1,9 @@
 import { createStackflowInstance, type StackInstance } from "../lib/stack/createStackflowInstance";
-import type { ActivityName, ActivityRegistry, StackName } from "./stackConfig";
+import type { ActivityName, StackConfigEntry, StackName, StackRouteConfig } from "./stackConfig";
 
 export type StackManagerConfig = {
   initStack: StackName;
-  stackList: Record<StackName, { label: string; initialActivity: ActivityName }>;
-  routes: ReadonlyArray<{
-    name: ActivityName;
-    activity: ActivityRegistry[ActivityName];
-  }>;
+  stackList: ReadonlyArray<StackConfigEntry>;
 };
 
 export type StackSwitchState = {
@@ -21,11 +17,19 @@ type StackSwitchSubscriber = () => void;
 export class StackManager {
   public readonly config: StackManagerConfig;
   public readonly _stackList: Record<StackName, StackInstance>;
+  private readonly stackConfigByName: Record<StackName, StackConfigEntry>;
   private switchState: StackSwitchState;
   private switchSubscribers = new Set<StackSwitchSubscriber>();
 
   constructor(config: StackManagerConfig) {
     this.config = config;
+    this.stackConfigByName = config.stackList.reduce(
+      (acc, entry) => {
+        acc[entry.name] = entry;
+        return acc;
+      },
+      {} as Record<StackName, StackConfigEntry>
+    );
     this._stackList = this.createStacks();
     this.switchState = {
       activeStack: config.initStack,
@@ -35,11 +39,15 @@ export class StackManager {
   }
 
   getStackNames(): StackName[] {
-    return Object.keys(this.config.stackList) as StackName[];
+    return this.config.stackList.map((entry) => entry.name);
   }
 
   getStack(stackName: StackName): StackInstance {
     return this._stackList[stackName];
+  }
+
+  getStackConfig(stackName: StackName): StackConfigEntry {
+    return this.stackConfigByName[stackName];
   }
 
   subscribeStackSwitch(subscriber: StackSwitchSubscriber) {
@@ -103,22 +111,14 @@ export class StackManager {
   }
 
   private createStacks(): Record<StackName, StackInstance> {
-    const routes = this.config.routes.map((route) => ({
-      name: route.name,
-      activity: route.activity,
-    }));
-
-    return this.getStackNames().reduce(
-      (acc, stackName) => {
-        acc[stackName] = createStackflowInstance({
-          stackName,
-          initialActivity: this.config.stackList[stackName].initialActivity,
-          routes,
-        });
-        return acc;
-      },
-      {} as Record<StackName, StackInstance>
-    );
+    return this.config.stackList.reduce((acc, stackConfig) => {
+      acc[stackConfig.name] = createStackflowInstance({
+        stackName: stackConfig.name,
+        initialActivity: stackConfig.initialActivity,
+        routes: stackConfig.activities,
+      });
+      return acc;
+    }, {} as Record<StackName, StackInstance>);
   }
 
   private emitStackSwitch() {

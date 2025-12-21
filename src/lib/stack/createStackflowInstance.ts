@@ -4,12 +4,12 @@ import { basicRendererPlugin } from "@stackflow/plugin-renderer-basic";
 
 import { navFlagPlugin } from "../../plugins/navFlagPlugin";
 import { layerStackPlugin } from "../../plugins/layerStackPlugin";
-import type { ActivityName, ActivityRegistry, StackName } from "../../stack/stackConfig";
-
-export type StackRouteConfig = {
-  name: ActivityName;
-  activity: ActivityRegistry[ActivityName];
-};
+import type {
+  ActivityName,
+  ActivityRegistry,
+  StackName,
+  StackRouteConfig,
+} from "../../stack/stackConfig";
 
 export type StackInstance = ReturnType<typeof stackflow<ActivityRegistry>>;
 
@@ -42,4 +42,3 @@ export const createStackflowInstance = ({
 
   return instance;
 };
-

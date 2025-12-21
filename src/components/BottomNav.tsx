@@ -11,12 +11,15 @@ export const BottomNav = () => {
   const { push } = useStackActions();
 
   const items = useMemo(() => {
-    const stackItems = stackManager.getStackNames().map((stackName) => ({
+    const stackItems = stackManager.getStackNames().map((stackName) => {
+      const stackConfig = stackManager.getStackConfig(stackName);
+      return {
         key: `stack:${stackName}`,
-        label: stackManager.config.stackList[stackName].label,
+        label: stackConfig.label,
         isActive: (current: StackName) => current === stackName,
         onClick: () => setActiveStack(stackName),
-      }));
+      };
+    });
 
     const quickItems = [
       {

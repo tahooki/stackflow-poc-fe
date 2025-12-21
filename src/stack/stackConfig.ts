@@ -4,9 +4,7 @@ import ModalLabActivity from "../activities/ModalLabActivity";
 import OrdersActivity from "../activities/OrdersActivity";
 import SnapshotActivity from "../activities/SnapshotActivity";
 
-export type StackName = "home" | "orders" | "snapshot";
-
-export const stackRoutes = [
+const activityRoutes = [
   {
     name: "home",
     activity: HomeActivity,
@@ -29,34 +27,73 @@ export const stackRoutes = [
   },
 ] as const;
 
+export type ActivityName = (typeof activityRoutes)[number]["name"];
+
 export type ActivityRegistry = {
-  [K in (typeof stackRoutes)[number]["name"]]: Extract<
-    (typeof stackRoutes)[number],
+  [K in ActivityName]: Extract<
+    (typeof activityRoutes)[number],
     { name: K }
   >["activity"];
 };
 
-export type ActivityName = Extract<keyof ActivityRegistry, string>;
+export type StackRouteConfig = (typeof activityRoutes)[number];
+
+export type StackName = "home" | "orders" | "snapshot";
+
+export type StackConfigEntry = {
+  name: StackName;
+  label: string;
+  initialActivity: ActivityName;
+  activities: ReadonlyArray<StackRouteConfig>;
+};
 
 const initStack: StackName = "home";
 
-const stackList = {
-  home: {
+// Normal (working) config. Commented out to reproduce the error case below.
+const stackList = [
+  {
+    name: "home",
     label: "Home",
     initialActivity: "home",
+    activities: activityRoutes,
   },
-  orders: {
+  {
+    name: "orders",
     label: "Orders",
     initialActivity: "orders",
+    activities: activityRoutes,
   },
-  snapshot: {
+  {
+    name: "snapshot",
     label: "Snapshot",
     initialActivity: "snapshot",
+    activities: activityRoutes,
   },
-} as const satisfies Record<StackName, { label: string; initialActivity: ActivityName }>;
+] as const satisfies ReadonlyArray<StackConfigEntry>;
+
+// Error case: initialActivity is not registered in activities for "orders" stack.
+// const stackList = [
+//   {
+//     name: "home",
+//     label: "Home",
+//     initialActivity: "home",
+//     activities: activityRoutes,
+//   },
+//   {
+//     name: "orders",
+//     label: "Orders",
+//     initialActivity: "orders",
+//     activities: activityRoutes.filter((route) => route.name !== "orders"),
+//   },
+//   {
+//     name: "snapshot",
+//     label: "Snapshot",
+//     initialActivity: "snapshot",
+//     activities: activityRoutes,
+//   },
+// ] as const satisfies ReadonlyArray<StackConfigEntry>;
 
 export const stackManagerConfig = {
   initStack,
   stackList,
-  routes: stackRoutes,
 } as const;
