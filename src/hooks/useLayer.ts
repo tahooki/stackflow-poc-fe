@@ -1,9 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useActivity } from "@stackflow/react";
 
-import { useOptionalStackScope, useStacks } from "../contexts/StackContext";
 import { Cfg } from "../config/Cfg";
 import type { OverlayKind } from "../lib/layerManager";
+import type { StackName } from "../stack/stackConfig";
 
 export type UseLayerOptions = {
   id?: string;
@@ -12,6 +12,7 @@ export type UseLayerOptions = {
   persistAcrossActivities?: boolean;
   onClose?: () => void;
   kind?: OverlayKind;
+  stackName?: StackName;
 };
 
 export const useLayer = ({
@@ -21,11 +22,16 @@ export const useLayer = ({
   persistAcrossActivities,
   onClose,
   kind = "modal",
+  stackName,
 }: UseLayerOptions) => {
   const activity = useActivity();
-  const { activeStack } = useStacks();
-  const scope = useOptionalStackScope();
-  const controller = Cfg.getLayer().getController(scope?.stackName ?? activeStack);
+  const stackManager = Cfg.getStack();
+  const activeStack = useSyncExternalStore(
+    stackManager.subscribeStackSwitch.bind(stackManager),
+    () => stackManager.getStackSwitchState().activeStack,
+    () => stackManager.getStackSwitchState().activeStack
+  );
+  const controller = Cfg.getLayer().getController(stackName ?? activeStack);
   const layerIdRef = useRef<string | null>(null);
 
   useEffect(() => {
