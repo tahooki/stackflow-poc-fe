@@ -9,8 +9,9 @@ type ModalInstance = {
 export type OpenLayeredModalOptions<TModal extends ModalInstance | void> = {
   /**
    * 고유 모달 ID. 백키/모달 스택 구분용
+   * 지정하지 않으면 LayerController가 ID를 발급한다.
    */
-  id: string;
+  id?: string;
   /**
    * 디버그/Devtools에 표시할 라벨
    */
@@ -68,19 +69,22 @@ export const openLayeredModal = <TModal extends ModalInstance | void>({
   stackName,
 }: OpenLayeredModalOptions<TModal>) => {
   let instance: TModal | null = null;
+  let layerId: string | null = null;
   const controller = Cfg.getLayer().getController(
     stackName ?? Cfg.getStack().config.initStack
   );
 
   const cleanup = () => {
-    controller.unregisterLayer(id);
+    if (layerId) {
+      controller.unregisterLayer(layerId);
+    }
     onClose?.();
     const modal = instance as ModalInstance | null;
     modal?.destroy?.();
     modal?.close?.();
   };
 
-  controller.registerLayer({
+  layerId = controller.registerLayer({
     kind,
     id,
     label,

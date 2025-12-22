@@ -62,7 +62,15 @@ type OverlayRegistration = Omit<OverlayLayer, "openedAt"> & {
   openedAt?: number;
 };
 
+type OverlayRegistrationInput = Omit<OverlayRegistration, "id"> & {
+  id?: string;
+};
+
 export type LayerRegistration = ActivityLayer | StepLayer | OverlayRegistration;
+export type LayerRegistrationInput =
+  | ActivityLayer
+  | StepLayer
+  | OverlayRegistrationInput;
 
 type Listener = (state: LayerState) => void;
 
@@ -81,8 +89,18 @@ const isOverlayKind = (kind: LayerKind): kind is OverlayKind =>
   overlayKinds.has(kind);
 
 const isOverlayLayer = (
-  layer: LayerFrame | LayerRegistration
-): layer is OverlayLayer | OverlayRegistration => isOverlayKind(layer.kind);
+  layer: LayerFrame | LayerRegistrationInput
+): layer is OverlayLayer | OverlayRegistrationInput => isOverlayKind(layer.kind);
+
+const createLayerId = (kind: LayerKind, activityId?: string) => {
+  const cryptoObj = globalThis.crypto;
+  const randomSuffix =
+    cryptoObj?.randomUUID?.() ??
+    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  return activityId
+    ? `${activityId}-${kind}-${randomSuffix}`
+    : `${kind}-${randomSuffix}`;
+};
 
 const getLayerOrder = (layer: LayerFrame) => {
   const base = isOverlayKind(layer.kind) ? overlayOrderBase : 0;
@@ -105,7 +123,7 @@ class LayerController {
   private state: LayerState = emptyState;
   private handlingBack = false;
 
-  registerLayer(layer: LayerRegistration, options?: { group?: string }) {
+  registerLayer(layer: LayerRegistrationInput, options?: { group?: string }) {
     const normalized = this.normalizeLayer(layer);
     this.layers.set(normalized.id, normalized);
     this.assignGroup(normalized.id, options?.group);
@@ -116,6 +134,7 @@ class LayerController {
       group: options?.group ?? null,
     });
     this.refreshState();
+    return normalized.id;
   }
 
   setGroupLayers(group: string, layers: LayerRegistration[]) {
@@ -302,20 +321,36 @@ class LayerController {
     this.emit();
   }
 
-  private normalizeLayer(layer: LayerRegistration): LayerFrame {
-    if (!isOverlayLayer(layer)) {
-      return layer;
+  private normalizeLayer(layer: LayerRegistrationInput): LayerFrame {
+    const withId = this.ensureLayerId(layer);
+    if (!isOverlayLayer(withId)) {
+      return withId;
     }
 
-    const existing = this.layers.get(layer.id);
+    const existing = this.layers.get(withId.id);
     const openedAt =
-      layer.openedAt ??
+      withId.openedAt ??
       (existing && isOverlayLayer(existing) ? existing.openedAt : undefined) ??
       Date.now();
 
     return {
-      ...layer,
+      ...withId,
       openedAt,
+    };
+  }
+
+  private ensureLayerId(layer: LayerRegistrationInput): LayerRegistration {
+    if (!isOverlayLayer(layer)) {
+      return layer;
+    }
+
+    if (layer.id) {
+      return layer as OverlayRegistration;
+    }
+
+    return {
+      ...layer,
+      id: createLayerId(layer.kind, layer.activityId),
     };
   }
 

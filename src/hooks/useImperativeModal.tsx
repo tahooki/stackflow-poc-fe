@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import Modal from "react-modal";
 
-import { useModalLayer } from "./useModalLayer";
+import { useLayer } from "./useLayer";
 
 type ImperativeModalRender = (ctx: { close: () => void }) => ReactNode;
 
@@ -40,7 +40,7 @@ export const useImperativeModal = ({
     setPayload(next);
   }, []);
 
-  useModalLayer({
+  useLayer({
     id,
     isOpen,
     label: payload?.label,

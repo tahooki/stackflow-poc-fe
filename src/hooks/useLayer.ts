@@ -1,11 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useActivity } from "@stackflow/react";
 
 import { useOptionalStackScope, useStacks } from "../contexts/StackContext";
 import { Cfg } from "../config/Cfg";
 import type { OverlayKind } from "../lib/layerManager";
 
-export type UseModalLayerOptions = {
+export type UseLayerOptions = {
   id?: string;
   label?: string;
   isOpen: boolean;
@@ -14,45 +14,50 @@ export type UseModalLayerOptions = {
   kind?: OverlayKind;
 };
 
-export const useModalLayer = ({
+export const useLayer = ({
   id: explicitId,
   label,
   isOpen,
   persistAcrossActivities,
   onClose,
   kind = "modal",
-}: UseModalLayerOptions) => {
+}: UseLayerOptions) => {
   const activity = useActivity();
   const { activeStack } = useStacks();
   const scope = useOptionalStackScope();
-  const modalId = explicitId ?? `${activity.id}-modal`;
   const controller = Cfg.getLayer().getController(scope?.stackName ?? activeStack);
+  const layerIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      controller.registerLayer({
-        kind,
-        id: modalId,
-        activityId: activity.id,
-        label,
-        persistAcrossActivities,
-        onClose,
-      });
-
-      return () => {
-        controller.unregisterLayer(modalId);
-      };
+    if (!isOpen) {
+      const layerId = explicitId ?? layerIdRef.current;
+      if (layerId) {
+        controller.unregisterLayer(layerId);
+      }
+      return undefined;
     }
 
-    controller.unregisterLayer(modalId);
-    return undefined;
+    const layerId = controller.registerLayer({
+      kind,
+      id: explicitId ?? layerIdRef.current ?? undefined,
+      activityId: activity.id,
+      label,
+      persistAcrossActivities,
+      onClose,
+    });
+
+    layerIdRef.current = layerId;
+
+    return () => {
+      controller.unregisterLayer(layerId);
+    };
   }, [
     activity.id,
     controller,
+    explicitId,
     isOpen,
     kind,
     label,
-    modalId,
     onClose,
     persistAcrossActivities,
   ]);
