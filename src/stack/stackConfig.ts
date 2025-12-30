@@ -1,4 +1,5 @@
 import DetailActivity from "../activities/DetailActivity";
+import DepthPushActivity from "../activities/DepthPushActivity";
 import HomeActivity from "../activities/HomeActivity";
 import ModalLabActivity from "../activities/ModalLabActivity";
 import OrdersActivity from "../activities/OrdersActivity";
@@ -12,6 +13,10 @@ const activityRoutes = [
   {
     name: "detail",
     activity: DetailActivity,
+  },
+  {
+    name: "depth",
+    activity: DepthPushActivity,
   },
   {
     name: "orders",

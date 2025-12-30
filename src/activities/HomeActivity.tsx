@@ -46,6 +46,9 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
             >
               Push detail screen (baseline)
             </button>
+            <button type="button" onClick={() => push("depth", { count: "1" })}>
+              Depth push demo (counter params)
+            </button>
             <button
               type="button"
               onClick={() =>
