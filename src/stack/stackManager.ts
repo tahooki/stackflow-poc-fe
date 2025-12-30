@@ -1,9 +1,16 @@
 import { createStackflowInstance, type StackInstance } from "../lib/stack/createStackflowInstance";
-import type { ActivityName, StackConfigEntry, StackName, StackRouteConfig } from "./stackConfig";
+import type {
+  ActivityName,
+  DepthRendererConfig,
+  StackConfigEntry,
+  StackName,
+  StackRouteConfig,
+} from "./stackConfig";
 
 export type StackManagerConfig = {
   initStack: StackName;
   stackList: ReadonlyArray<StackConfigEntry>;
+  depthRenderer?: DepthRendererConfig;
 };
 
 export type StackSwitchState = {
@@ -112,10 +119,14 @@ export class StackManager {
 
   private createStacks(): Record<StackName, StackInstance> {
     return this.config.stackList.reduce((acc, stackConfig) => {
+      const maxVisible =
+        this.config.depthRenderer?.stackOverrides?.[stackConfig.name] ??
+        this.config.depthRenderer?.maxVisible;
       acc[stackConfig.name] = createStackflowInstance({
         stackName: stackConfig.name,
         initialActivity: stackConfig.initialActivity,
         routes: stackConfig.activities,
+        depthRenderer: maxVisible ? { maxVisible } : undefined,
       });
       return acc;
     }, {} as Record<StackName, StackInstance>);

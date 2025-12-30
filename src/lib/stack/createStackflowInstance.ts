@@ -4,6 +4,8 @@ import { basicRendererPlugin } from "@stackflow/plugin-renderer-basic";
 
 import { navFlagPlugin } from "../../plugins/navFlagPlugin";
 import { layerStackPlugin } from "../../plugins/layerStackPlugin";
+import { depthRendererPlugin } from "../../plugins/depthRendererPlugin";
+import { depthBackPolicyPlugin } from "../../plugins/depthBackPolicyPlugin";
 import type {
   ActivityName,
   ActivityRegistry,
@@ -17,21 +19,28 @@ export const createStackflowInstance = ({
   stackName,
   initialActivity,
   routes,
+  depthRenderer,
 }: {
   stackName: StackName;
   initialActivity: ActivityName;
   routes: ReadonlyArray<StackRouteConfig>;
+  depthRenderer?: { maxVisible: number };
 }): StackInstance => {
+  const rendererPlugin = depthRenderer
+    ? depthRendererPlugin(depthRenderer)
+    : basicRendererPlugin();
+
   const instance = stackflow<ActivityRegistry>({
     transitionDuration: 350,
     activities: {} as ActivityRegistry,
     initialActivity: () => initialActivity,
     plugins: [
-      basicRendererPlugin(),
+      rendererPlugin,
       basicUIPlugin({
         theme: "android",
       }),
       navFlagPlugin(),
+      ...(depthRenderer ? [depthBackPolicyPlugin(depthRenderer)] : []),
       layerStackPlugin(stackName),
     ],
   });

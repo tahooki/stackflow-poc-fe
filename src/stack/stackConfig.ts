@@ -40,6 +40,11 @@ export type StackRouteConfig = (typeof activityRoutes)[number];
 
 export type StackName = "home" | "orders" | "snapshot";
 
+export type DepthRendererConfig = {
+  maxVisible: number;
+  stackOverrides?: Partial<Record<StackName, number>>;
+};
+
 export type StackConfigEntry = {
   name: StackName;
   label: string;
@@ -96,4 +101,7 @@ const stackList = [
 export const stackManagerConfig = {
   initStack,
   stackList,
+  depthRenderer: {
+    maxVisible: 5,
+  },
 } as const;
