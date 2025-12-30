@@ -43,6 +43,8 @@ export const depthBackPolicyPlugin =
         for (let i = 0; i < activeCount - 1; i += 1) {
           actions.dispatchEvent("Popped", { skipExitActiveState: true });
         }
+        // Reset the floor so the next cycle starts fresh.
+        floorIndex = 0;
       },
     };
   };
