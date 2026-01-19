@@ -2,7 +2,9 @@ import {
   createContext,
   useContext,
   useCallback,
+  useEffect,
   useMemo,
+  useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
@@ -34,10 +36,24 @@ export const StackProvider = ({ children }: { children: ReactNode }) => {
     () => manager.getStackSwitchState().activeStack,
     () => manager.getStackSwitchState().activeStack
   );
+  const [mountedStacks, setMountedStacks] = useState(
+    () => new Set<StackName>([activeStack])
+  );
   const setActiveStack = useCallback(
     (next: StackName) => manager.setActiveStack(next),
     [manager]
   );
+
+  useEffect(() => {
+    setMountedStacks((prev) => {
+      if (prev.has(activeStack)) {
+        return prev;
+      }
+      const next = new Set(prev);
+      next.add(activeStack);
+      return next;
+    });
+  }, [activeStack]);
 
   const value = useMemo(
     () => ({
@@ -54,6 +70,7 @@ export const StackProvider = ({ children }: { children: ReactNode }) => {
         {manager.getStackNames().map((stackName: StackName) => {
           const StackComponent = manager.getStack(stackName).Stack;
           const isActive = stackName === activeStack;
+          const isMounted = mountedStacks.has(stackName) || isActive;
 
           return (
             <div
@@ -64,9 +81,9 @@ export const StackProvider = ({ children }: { children: ReactNode }) => {
               ]
                 .filter(Boolean)
                 .join(" ")}
-            >
+              >
               <StackScopeProvider stackName={stackName}>
-                <StackComponent />
+                {isMounted ? <StackComponent /> : null}
               </StackScopeProvider>
             </div>
           );
