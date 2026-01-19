@@ -1,10 +1,8 @@
 import { createStackflowInstance, type StackInstance } from "../lib/stack/createStackflowInstance";
 import type {
-  ActivityName,
   DepthRendererConfig,
   StackConfigEntry,
   StackName,
-  StackRouteConfig,
 } from "./stackConfig";
 
 export type StackManagerConfig = {

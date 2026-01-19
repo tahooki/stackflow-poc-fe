@@ -25,7 +25,7 @@ const buildStackLayers = (
       isRoot: activity.isRoot,
       isActive: activity.isActive,
       zIndex: activity.zIndex,
-      exitedBy: activity.exitedBy,
+      exitedBy: activity.exitedBy?.id ?? null,
       order,
       onClose: activity.isRoot ? undefined : () => actions.pop(),
     });
