@@ -8,6 +8,38 @@ import {
   getActiveActivityNames,
 } from "./helpers";
 
+const debugEnabled = Boolean(process.env.DEBUG_STACKFLOW_TESTS);
+
+const debugStack = (
+  instance: ReturnType<typeof createTestStackflow>["instance"],
+  label: string
+) => {
+  if (!debugEnabled) return;
+
+  const stack = instance.actions.getStack();
+  const activities = stack.activities.map((activity) => ({
+    name: activity.name,
+    key: activity.key,
+    transitionState: activity.transitionState,
+  }));
+
+  const domSummary =
+    typeof document === "undefined"
+      ? { dom: "unavailable" }
+      : {
+          rendered: Array.from(
+            document.querySelectorAll("[data-testid^='activity-']")
+          ).map((node) => node.getAttribute("data-testid")),
+        };
+
+  // eslint-disable-next-line no-console
+  console.info(`[depth-renderer] ${label}`, {
+    globalTransitionState: stack.globalTransitionState,
+    activities,
+    ...domSummary,
+  });
+};
+
 describe("depthRenderer plugin", () => {
   it("limits rendered activities to maxVisible", () => {
     const { instance } = createTestStackflow({
@@ -20,6 +52,8 @@ describe("depthRenderer plugin", () => {
       instance.actions.push("orders", { id: "3" });
       instance.actions.push("snapshot", { id: "4" });
     });
+
+    debugStack(instance, "after push");
 
     expect(getActiveActivities(instance)).toHaveLength(5);
     expect(screen.queryByTestId("activity-home")).toBeNull();
@@ -40,11 +74,14 @@ describe("depthRenderer plugin", () => {
       instance.actions.push("snapshot", { id: "4" });
     });
 
+    debugStack(instance, "before pop");
     expect(screen.queryByTestId("activity-home")).toBeNull();
 
     act(() => {
       instance.actions.pop(2, { animate: false });
     });
+
+    debugStack(instance, "after pop");
 
     expect(getActiveActivityNames(instance)).toEqual(["home", "detail", "depth"]);
     expect(screen.getByTestId("activity-home")).toBeInTheDocument();
@@ -59,9 +96,13 @@ describe("depthRenderer plugin", () => {
       instance.actions.push("detail", { id: "1" });
     });
 
+    debugStack(instance, "after push detail");
+
     act(() => {
       instance.actions.pop({ animate: false });
     });
+
+    debugStack(instance, "after pop detail");
 
     expect(screen.queryByTestId("activity-detail")).toBeNull();
   });
@@ -76,6 +117,8 @@ describe("depthRenderer plugin", () => {
       instance.actions.push("depth", { id: "2" });
       instance.actions.push("orders", { id: "3" });
     });
+
+    debugStack(instance, "after push (maxVisible=0)");
 
     const rendered = screen.getAllByTestId(/activity-/);
     expect(rendered).toHaveLength(4);
