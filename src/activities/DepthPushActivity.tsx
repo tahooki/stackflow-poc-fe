@@ -24,7 +24,7 @@ const DepthPushActivity: ActivityComponentType<DepthPushActivityParams> = ({
     let nextCount = current;
     for (let i = 0; i < times; i += 1) {
       nextCount += 1;
-      push("depth", { count: String(nextCount) });
+      push("depth", { params: { count: String(nextCount) } });
     }
   };
 

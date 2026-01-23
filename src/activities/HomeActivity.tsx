@@ -4,6 +4,11 @@ import type { ActivityComponentType } from "@stackflow/react";
 import { useMemo } from "react";
 
 import { useStackActions } from "../hooks/useStackActions";
+import {
+  StackFlagClearTop,
+  StackFlagJumpToClearTop,
+  StackFlagSingleTop,
+} from "../plugins/stackFlagPlugin";
 
 export type HomeActivityParams = {
   highlight?: string;
@@ -42,23 +47,25 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
           <div className="activity__actions">
             <button
               type="button"
-              onClick={() => push("detail", { id: String(Date.now()) })}
+              onClick={() =>
+                push("detail", { params: { id: String(Date.now()) } })
+              }
             >
               Push detail screen (baseline)
             </button>
-            <button type="button" onClick={() => push("depth", { count: "1" })}>
+            <button
+              type="button"
+              onClick={() => push("depth", { params: { count: "1" } })}
+            >
               Depth push demo (counter params)
             </button>
             <button
               type="button"
               onClick={() =>
-                push(
-                  "detail",
-                  { id: "42", title: "Reused via CLEAR_TOP" },
-                  {
-                    stackFlag: { flag: "CLEAR_TOP", activity: "detail" },
-                  }
-                )
+                push("detail", {
+                  params: { id: "42", title: "Reused via CLEAR_TOP" },
+                  flag: new StackFlagClearTop("detail"),
+                })
               }
             >
               Bring Detail 42 to front (CLEAR_TOP)
@@ -66,16 +73,10 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
             <button
               type="button"
               onClick={() =>
-                push(
-                  "detail",
-                  { id: "99", title: "Jumped from notification" },
-                  {
-                    stackFlag: {
-                      flag: "JUMP_TO_CLEAR_TOP",
-                      activity: "detail",
-                    },
-                  }
-                )
+                push("detail", {
+                  params: { id: "99", title: "Jumped from notification" },
+                  flag: new StackFlagJumpToClearTop("detail"),
+                })
               }
             >
               Jump to Detail 99 (JUMP_TO_CLEAR_TOP)
@@ -83,8 +84,9 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
             <button
               type="button"
               onClick={() =>
-                push("orders", {}, {
-                  stackFlag: { flag: "SINGLE_TOP" },
+                push("orders", {
+                  params: {},
+                  flag: new StackFlagSingleTop(),
                 })
               }
             >
@@ -93,23 +95,27 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
             <button
               type="button"
               onClick={() =>
-                push("orders", {}, {
+                push("orders", {
+                  params: {},
                   stack: "orders",
-                  stackFlag: { flag: "SINGLE_TOP" },
+                  flag: new StackFlagSingleTop(),
                 })
               }
             >
               Switch to Orders stack + push Orders
             </button>
-            <button type="button" onClick={() => push("modal", {})}>
+            <button type="button" onClick={() => push("modal", { params: {} })}>
               Modal.open() demo (full-screen)
             </button>
-            <button type="button" onClick={() => push("snapshot", {})}>
+            <button
+              type="button"
+              onClick={() => push("snapshot", { params: {} })}
+            >
               Screenshot lab with Scroll Stress
             </button>
             <button
               type="button"
-              onClick={() => push("snapshot", {}, { stack: "snapshot" })}
+              onClick={() => push("snapshot", { params: {}, stack: "snapshot" })}
             >
               Switch to Snapshot stack
             </button>

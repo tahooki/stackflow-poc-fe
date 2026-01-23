@@ -5,6 +5,12 @@ import { describe, expect, it } from "vitest";
 import {
   stackFlagPlugin,
   STACK_FLAG_INTERNAL_FIELD,
+  StackFlagClearStack,
+  StackFlagClearTop,
+  StackFlagClearTopSingleTop,
+  StackFlagJumpTo,
+  StackFlagJumpToClearTop,
+  StackFlagSingleTop,
   type StackFlag,
 } from "../../plugins/stackFlagPlugin";
 import { createTestStackflow, getTopActivity } from "./helpers";
@@ -29,7 +35,7 @@ describe("stackFlag plugin behavior", () => {
       plugins: [basicRendererPlugin(), stackFlagPlugin()],
     });
 
-    pushWithFlag(instance, "detail", { flag: "SINGLE_TOP" });
+    pushWithFlag(instance, "detail", new StackFlagSingleTop());
 
     const top = getTopActivity(instance);
     expect(top?.params[STACK_FLAG_INTERNAL_FIELD]).toBeUndefined();
@@ -44,7 +50,7 @@ describe("stackFlag plugin behavior", () => {
       instance.actions.push("detail", { id: "1" });
     });
 
-    pushWithFlag(instance, "detail", { flag: "SINGLE_TOP" }, { id: "2" });
+    pushWithFlag(instance, "detail", new StackFlagSingleTop(), { id: "2" });
 
     const details = instance.actions
       .getStack()
@@ -63,10 +69,7 @@ describe("stackFlag plugin behavior", () => {
       instance.actions.push("orders", { id: "2" });
     });
 
-    pushWithFlag(instance, "detail", {
-      flag: "CLEAR_TOP",
-      activity: "detail",
-    });
+    pushWithFlag(instance, "detail", new StackFlagClearTop("detail"));
 
     const orders = instance.actions
       .getStack()
@@ -86,7 +89,7 @@ describe("stackFlag plugin behavior", () => {
       instance.actions.push("orders", { id: "2" });
     });
 
-    pushWithFlag(instance, "snapshot", { flag: "CLEAR_STACK" });
+    pushWithFlag(instance, "snapshot", new StackFlagClearStack());
 
     const detail = instance.actions
       .getStack()
@@ -105,7 +108,7 @@ describe("stackFlag plugin behavior", () => {
       plugins: [basicRendererPlugin(), stackFlagPlugin()],
     });
 
-    pushWithFlag(instance, "orders", { flag: "JUMP_TO", activity: "detail" });
+    pushWithFlag(instance, "orders", new StackFlagJumpTo("detail"));
 
     expect(getTopActivity(instance)?.name).toBe("detail");
   });
@@ -115,10 +118,11 @@ describe("stackFlag plugin behavior", () => {
       plugins: [basicRendererPlugin(), stackFlagPlugin()],
     });
 
-    pushWithFlag(instance, "detail", {
-      flag: "CLEAR_TOP_SINGLE_TOP",
-      activity: "orders",
-    });
+    pushWithFlag(
+      instance,
+      "detail",
+      new StackFlagClearTopSingleTop("orders")
+    );
 
     const orders = instance.actions
       .getStack()
@@ -138,10 +142,11 @@ describe("stackFlag plugin behavior", () => {
       instance.actions.push("orders", { id: "2" });
     });
 
-    pushWithFlag(instance, "orders", {
-      flag: "JUMP_TO_CLEAR_TOP",
-      activity: "detail",
-    });
+    pushWithFlag(
+      instance,
+      "orders",
+      new StackFlagJumpToClearTop("detail")
+    );
 
     const orders = instance.actions
       .getStack()
@@ -158,7 +163,7 @@ describe("stackFlag plugin behavior", () => {
 
     act(() => {
       instance.actions.push("detail", {
-        [STACK_FLAG_INTERNAL_FIELD]: { flag: "SINGLE_TOP" },
+        [STACK_FLAG_INTERNAL_FIELD]: new StackFlagSingleTop(),
       });
     });
 

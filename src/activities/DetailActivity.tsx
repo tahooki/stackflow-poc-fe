@@ -3,6 +3,10 @@ import type { ActivityComponentType } from "@stackflow/react";
 import { useMemo } from "react";
 
 import { useStackActions } from "../hooks/useStackActions";
+import {
+  StackFlagClearStack,
+  StackFlagSingleTop,
+} from "../plugins/stackFlagPlugin";
 
 export type DetailActivityParams = {
   id: string;
@@ -43,13 +47,10 @@ const DetailActivity: ActivityComponentType<DetailActivityParams> = ({
             <button
               type="button"
               onClick={() =>
-                push(
-                  "home",
-                  { highlight: "Returned from Detail via CLEAR_STACK" },
-                  {
-                    stackFlag: { flag: "CLEAR_STACK" },
-                  }
-                )
+                push("home", {
+                  params: { highlight: "Returned from Detail via CLEAR_STACK" },
+                  flag: new StackFlagClearStack(),
+                })
               }
             >
               Clear stack and go Home
@@ -57,18 +58,18 @@ const DetailActivity: ActivityComponentType<DetailActivityParams> = ({
             <button
               type="button"
               onClick={() =>
-                push(
-                  "detail",
-                  { id: params.id, title: "Prevent duplicates" },
-                  {
-                    stackFlag: { flag: "SINGLE_TOP" },
-                  }
-                )
+                push("detail", {
+                  params: { id: params.id, title: "Prevent duplicates" },
+                  flag: new StackFlagSingleTop(),
+                })
               }
             >
               Refresh detail (SINGLE_TOP)
             </button>
-            <button type="button" onClick={() => push("snapshot", {})}>
+            <button
+              type="button"
+              onClick={() => push("snapshot", { params: {} })}
+            >
               Snapshot
             </button>
           </div>

@@ -8,13 +8,61 @@ import type { StackflowReactPlugin } from "@stackflow/react";
  * Android의 Intent Flag 개념을 Stackflow에 이식한 플러그인 구현.
  * 호출부는 stackFlag만 지정하고, 실제 스택 조정은 모두 플러그인에서 처리하도록 강제합니다.
  */
+export type StackFlagKind =
+  | "SINGLE_TOP"
+  | "CLEAR_TOP"
+  | "JUMP_TO"
+  | "CLEAR_STACK"
+  | "CLEAR_TOP_SINGLE_TOP"
+  | "JUMP_TO_CLEAR_TOP";
+
+export abstract class StackFlagBase {
+  abstract readonly flag: StackFlagKind;
+}
+
+export class StackFlagSingleTop extends StackFlagBase {
+  readonly flag = "SINGLE_TOP" as const;
+}
+
+export class StackFlagClearTop extends StackFlagBase {
+  readonly flag = "CLEAR_TOP" as const;
+  constructor(public readonly activity: string) {
+    super();
+  }
+}
+
+export class StackFlagJumpTo extends StackFlagBase {
+  readonly flag = "JUMP_TO" as const;
+  constructor(public readonly activity: string) {
+    super();
+  }
+}
+
+export class StackFlagClearStack extends StackFlagBase {
+  readonly flag = "CLEAR_STACK" as const;
+}
+
+export class StackFlagClearTopSingleTop extends StackFlagBase {
+  readonly flag = "CLEAR_TOP_SINGLE_TOP" as const;
+  constructor(public readonly activity: string) {
+    super();
+  }
+}
+
+export class StackFlagJumpToClearTop extends StackFlagBase {
+  readonly flag = "JUMP_TO_CLEAR_TOP" as const;
+  constructor(public readonly activity: string) {
+    super();
+  }
+}
+
 export type StackFlag =
-  | { flag: "SINGLE_TOP" }
-  | { flag: "CLEAR_TOP"; activity: string }
-  | { flag: "JUMP_TO"; activity: string }
-  | { flag: "CLEAR_STACK" }
-  | { flag: "CLEAR_TOP_SINGLE_TOP"; activity: string }
-  | { flag: "JUMP_TO_CLEAR_TOP"; activity: string };
+  | StackFlagSingleTop
+  | StackFlagClearTop
+  | StackFlagJumpTo
+  | StackFlagClearStack
+  | StackFlagClearTopSingleTop
+  | StackFlagJumpToClearTop;
 
 /**
  * 호출부에서 주입하는 내부 키. 실제 params로 전달되지는 않도록 sanitize 단계에서 제거합니다.

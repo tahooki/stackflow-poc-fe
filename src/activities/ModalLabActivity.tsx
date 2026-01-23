@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import "../assets/modalLab.css";
 import { useStackActions } from "../hooks/useStackActions";
 import { useImperativeModal } from "../hooks/useImperativeModal";
+import { StackFlagSingleTop } from "../plugins/stackFlagPlugin";
 
 type ModalTemplate = {
   title: string;
@@ -105,8 +106,10 @@ const ModalLabActivity: ActivityComponentType = () => {
                   onClick={() => {
                     close();
                     push("detail", {
-                      id: "modal-hop",
-                      title: "Opened from Modal.open() demo",
+                      params: {
+                        id: "modal-hop",
+                        title: "Opened from Modal.open() demo",
+                      },
                     });
                   }}
                 >
@@ -193,12 +196,18 @@ return (
               <button
                 type="button"
                 onClick={() =>
-                  push("orders", {}, { stackFlag: { flag: "SINGLE_TOP" } })
+                  push("orders", {
+                    params: {},
+                    flag: new StackFlagSingleTop(),
+                  })
                 }
               >
                 Navigate to Orders
               </button>
-              <button type="button" onClick={() => push("snapshot", {})}>
+              <button
+                type="button"
+                onClick={() => push("snapshot", { params: {} })}
+              >
                 Jump to Snapshot lab
               </button>
             </div>

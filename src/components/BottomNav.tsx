@@ -27,13 +27,16 @@ export const BottomNav = () => {
         label: "Detail",
         isActive: () => false,
         onClick: () =>
-          push("detail", { id: String(Date.now()) }, { stack: "home" }),
+          push("detail", {
+            params: { id: String(Date.now()) },
+            stack: "home",
+          }),
       },
       {
         key: "quick:modal",
         label: "Modal",
         isActive: () => false,
-        onClick: () => push("modal", {}, { stack: "home" }),
+        onClick: () => push("modal", { params: {}, stack: "home" }),
       },
     ];
 
