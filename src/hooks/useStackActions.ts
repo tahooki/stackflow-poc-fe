@@ -2,8 +2,8 @@ import { useCallback, useMemo } from "react";
 
 import { useOptionalStackScope, useStacks } from "../contexts/StackContext";
 import type { StackName } from "../stack/stackConfig";
-import type { NavFlag } from "../plugins/navFlagPlugin";
-import { NAV_FLAG_INTERNAL_FIELD } from "../plugins/navFlagPlugin";
+import type { StackFlag } from "../plugins/stackFlagPlugin";
+import { STACK_FLAG_INTERNAL_FIELD } from "../plugins/stackFlagPlugin";
 import type { StackInstance } from "../lib/stack/createStackflowInstance";
 
 type UnknownRecord = Record<string, unknown>;
@@ -11,7 +11,7 @@ type UnknownRecord = Record<string, unknown>;
 export type StackPushOptions = {
   stack?: StackName;
   animate?: boolean;
-  navFlag?: NavFlag;
+  stackFlag?: StackFlag;
 };
 
 export const useStackActions = () => {
@@ -42,16 +42,16 @@ export const useStackActions = () => {
         setActiveStack(targetStack);
       }
 
-      const { navFlag, animate } = options ?? {};
+      const { stackFlag, animate } = options ?? {};
       const payload =
-        navFlag && params && typeof params === "object"
+        stackFlag && params && typeof params === "object"
           ? ({
               ...(params as UnknownRecord),
-              [NAV_FLAG_INTERNAL_FIELD]: navFlag,
+              [STACK_FLAG_INTERNAL_FIELD]: stackFlag,
             } as typeof params)
-          : navFlag
+          : stackFlag
           ? ({
-              [NAV_FLAG_INTERNAL_FIELD]: navFlag,
+              [STACK_FLAG_INTERNAL_FIELD]: stackFlag,
             } as typeof params)
           : params;
 
@@ -67,7 +67,7 @@ export const useStackActions = () => {
     (
       activityName: Parameters<StackInstance["actions"]["replace"]>[0],
       params: Parameters<StackInstance["actions"]["replace"]>[1],
-      options?: Omit<StackPushOptions, "navFlag"> & { stack?: StackName }
+      options?: Omit<StackPushOptions, "stackFlag"> & { stack?: StackName }
     ) => {
       const targetStack = options?.stack ?? defaultStack;
 
@@ -150,4 +150,4 @@ export const useStackActions = () => {
   );
 };
 
-export type { NavFlag } from "../plugins/navFlagPlugin";
+export type { StackFlag } from "../plugins/stackFlagPlugin";

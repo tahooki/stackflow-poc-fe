@@ -2,38 +2,42 @@ import { act } from "@testing-library/react";
 import { basicRendererPlugin } from "@stackflow/plugin-renderer-basic";
 import { describe, expect, it } from "vitest";
 
-import { navFlagPlugin, NAV_FLAG_INTERNAL_FIELD, type NavFlag } from "../../plugins/navFlagPlugin";
+import {
+  stackFlagPlugin,
+  STACK_FLAG_INTERNAL_FIELD,
+  type StackFlag,
+} from "../../plugins/stackFlagPlugin";
 import { createTestStackflow, getTopActivity } from "./helpers";
 
 const pushWithFlag = (
   instance: ReturnType<typeof createTestStackflow>["instance"],
   activityName: string,
-  flag: NavFlag,
+  flag: StackFlag,
   params: Record<string, string | undefined> = {}
 ) => {
   act(() => {
     instance.actions.push(activityName, {
       ...params,
-      [NAV_FLAG_INTERNAL_FIELD]: flag,
+      [STACK_FLAG_INTERNAL_FIELD]: flag,
     });
   });
 };
 
-describe("navFlag plugin behavior", () => {
-  it("sanitizes navFlag payload from params", () => {
+describe("stackFlag plugin behavior", () => {
+  it("sanitizes stackFlag payload from params", () => {
     const { instance } = createTestStackflow({
-      plugins: [basicRendererPlugin(), navFlagPlugin()],
+      plugins: [basicRendererPlugin(), stackFlagPlugin()],
     });
 
     pushWithFlag(instance, "detail", { flag: "SINGLE_TOP" });
 
     const top = getTopActivity(instance);
-    expect(top?.params[NAV_FLAG_INTERNAL_FIELD]).toBeUndefined();
+    expect(top?.params[STACK_FLAG_INTERNAL_FIELD]).toBeUndefined();
   });
 
   it("SINGLE_TOP creates a new top activity when top matches", () => {
     const { instance } = createTestStackflow({
-      plugins: [basicRendererPlugin(), navFlagPlugin()],
+      plugins: [basicRendererPlugin(), stackFlagPlugin()],
     });
 
     act(() => {
@@ -51,7 +55,7 @@ describe("navFlag plugin behavior", () => {
 
   it("CLEAR_TOP rewinds to target activity", () => {
     const { instance } = createTestStackflow({
-      plugins: [basicRendererPlugin(), navFlagPlugin()],
+      plugins: [basicRendererPlugin(), stackFlagPlugin()],
     });
 
     act(() => {
@@ -74,7 +78,7 @@ describe("navFlag plugin behavior", () => {
 
   it("CLEAR_STACK clears all and pushes new activity", () => {
     const { instance } = createTestStackflow({
-      plugins: [basicRendererPlugin(), navFlagPlugin()],
+      plugins: [basicRendererPlugin(), stackFlagPlugin()],
     });
 
     act(() => {
@@ -98,7 +102,7 @@ describe("navFlag plugin behavior", () => {
 
   it("JUMP_TO forces navigation to target activity", () => {
     const { instance } = createTestStackflow({
-      plugins: [basicRendererPlugin(), navFlagPlugin()],
+      plugins: [basicRendererPlugin(), stackFlagPlugin()],
     });
 
     pushWithFlag(instance, "orders", { flag: "JUMP_TO", activity: "detail" });
@@ -108,7 +112,7 @@ describe("navFlag plugin behavior", () => {
 
   it("CLEAR_TOP_SINGLE_TOP falls back to SINGLE_TOP when target is missing", () => {
     const { instance } = createTestStackflow({
-      plugins: [basicRendererPlugin(), navFlagPlugin()],
+      plugins: [basicRendererPlugin(), stackFlagPlugin()],
     });
 
     pushWithFlag(instance, "detail", {
@@ -126,7 +130,7 @@ describe("navFlag plugin behavior", () => {
 
   it("JUMP_TO_CLEAR_TOP rewinds when target exists", () => {
     const { instance } = createTestStackflow({
-      plugins: [basicRendererPlugin(), navFlagPlugin()],
+      plugins: [basicRendererPlugin(), stackFlagPlugin()],
     });
 
     act(() => {
@@ -147,18 +151,18 @@ describe("navFlag plugin behavior", () => {
     expect(getTopActivity(instance)?.name).toBe("detail");
   });
 
-  it("without plugin, navFlag payload stays in params", () => {
+  it("without plugin, stackFlag payload stays in params", () => {
     const { instance } = createTestStackflow({
       plugins: [basicRendererPlugin()],
     });
 
     act(() => {
       instance.actions.push("detail", {
-        [NAV_FLAG_INTERNAL_FIELD]: { flag: "SINGLE_TOP" },
+        [STACK_FLAG_INTERNAL_FIELD]: { flag: "SINGLE_TOP" },
       });
     });
 
     const top = getTopActivity(instance);
-    expect(top?.params[NAV_FLAG_INTERNAL_FIELD]).toBeDefined();
+    expect(top?.params[STACK_FLAG_INTERNAL_FIELD]).toBeDefined();
   });
 });

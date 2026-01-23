@@ -56,7 +56,7 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
                   "detail",
                   { id: "42", title: "Reused via CLEAR_TOP" },
                   {
-                    navFlag: { flag: "CLEAR_TOP", activity: "detail" },
+                    stackFlag: { flag: "CLEAR_TOP", activity: "detail" },
                   }
                 )
               }
@@ -70,7 +70,10 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
                   "detail",
                   { id: "99", title: "Jumped from notification" },
                   {
-                    navFlag: { flag: "JUMP_TO_CLEAR_TOP", activity: "detail" },
+                    stackFlag: {
+                      flag: "JUMP_TO_CLEAR_TOP",
+                      activity: "detail",
+                    },
                   }
                 )
               }
@@ -81,7 +84,7 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
               type="button"
               onClick={() =>
                 push("orders", {}, {
-                  navFlag: { flag: "SINGLE_TOP" },
+                  stackFlag: { flag: "SINGLE_TOP" },
                 })
               }
             >
@@ -92,7 +95,7 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
               onClick={() =>
                 push("orders", {}, {
                   stack: "orders",
-                  navFlag: { flag: "SINGLE_TOP" },
+                  stackFlag: { flag: "SINGLE_TOP" },
                 })
               }
             >

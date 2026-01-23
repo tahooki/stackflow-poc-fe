@@ -2,7 +2,7 @@ import { stackflow } from "@stackflow/react";
 import { basicUIPlugin } from "@stackflow/plugin-basic-ui";
 import { basicRendererPlugin } from "@stackflow/plugin-renderer-basic";
 
-import { navFlagPlugin } from "../../plugins/navFlagPlugin";
+import { stackFlagPlugin } from "../../plugins/stackFlagPlugin";
 import { layerStackPlugin } from "../../plugins/layerStackPlugin";
 import { depthRendererPlugin } from "../../plugins/depthRendererPlugin";
 import { depthBackPolicyPlugin } from "../../plugins/depthBackPolicyPlugin";
@@ -39,7 +39,7 @@ export const createStackflowInstance = ({
       basicUIPlugin({
         theme: "android",
       }),
-      navFlagPlugin(),
+      stackFlagPlugin(),
       ...(depthRenderer ? [depthBackPolicyPlugin(depthRenderer)] : []),
       layerStackPlugin(stackName),
     ],

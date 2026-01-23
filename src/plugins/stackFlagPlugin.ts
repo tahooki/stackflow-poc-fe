@@ -6,9 +6,9 @@ import type { StackflowReactPlugin } from "@stackflow/react";
 
 /**
  * Android의 Intent Flag 개념을 Stackflow에 이식한 플러그인 구현.
- * 호출부는 navFlag만 지정하고, 실제 스택 조정은 모두 플러그인에서 처리하도록 강제합니다.
+ * 호출부는 stackFlag만 지정하고, 실제 스택 조정은 모두 플러그인에서 처리하도록 강제합니다.
  */
-export type NavFlag =
+export type StackFlag =
   | { flag: "SINGLE_TOP" }
   | { flag: "CLEAR_TOP"; activity: string }
   | { flag: "JUMP_TO"; activity: string }
@@ -19,7 +19,7 @@ export type NavFlag =
 /**
  * 호출부에서 주입하는 내부 키. 실제 params로 전달되지는 않도록 sanitize 단계에서 제거합니다.
  */
-const NAV_FLAG_FIELD = "__navFlag";
+const STACK_FLAG_FIELD = "__stackFlag";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -28,37 +28,37 @@ type PushActionParams = Parameters<StackflowActions["push"]>[0];
 type ActivityParamsShape = PushActionParams["activityParams"] & UnknownRecord;
 type ActivityContextShape = PushActionParams["activityContext"] & UnknownRecord;
 
-type NavFlagCarrier = UnknownRecord & { [NAV_FLAG_FIELD]?: NavFlag };
+type StackFlagCarrier = UnknownRecord & { [STACK_FLAG_FIELD]?: StackFlag };
 
 /**
  * params/context 객체에 섞여 들어온 내부 키를 제거합니다.
- * 단순 Object spread로 복사하면서 __navFlag 필드를 제외합니다.
+ * 단순 Object spread로 복사하면서 __stackFlag 필드를 제외합니다.
  */
 const sanitizeRecord = <T extends UnknownRecord | undefined>(params: T): T => {
   if (!params || typeof params !== "object") {
     return params;
   }
 
-  if (!Object.prototype.hasOwnProperty.call(params, NAV_FLAG_FIELD)) {
+  if (!Object.prototype.hasOwnProperty.call(params, STACK_FLAG_FIELD)) {
     return params;
   }
 
-  const rest = { ...(params as NavFlagCarrier) };
-  delete rest[NAV_FLAG_FIELD];
+  const rest = { ...(params as StackFlagCarrier) };
+  delete rest[STACK_FLAG_FIELD];
   return rest as T;
 };
 
 /**
- * params에 숨겨둔 navFlag 정보를 추출합니다. 없으면 undefined 반환.
+ * params에 숨겨둔 stackFlag 정보를 추출합니다. 없으면 undefined 반환.
  */
-const pickNavFlag = (
+const pickStackFlag = (
   params: UnknownRecord | undefined
-): NavFlag | undefined => {
+): StackFlag | undefined => {
   if (!params || typeof params !== "object") {
     return undefined;
   }
 
-  const candidate = (params as NavFlagCarrier)[NAV_FLAG_FIELD];
+  const candidate = (params as StackFlagCarrier)[STACK_FLAG_FIELD];
   return candidate;
 };
 
@@ -69,16 +69,16 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({
   actionParams,
   actions,
 }) => {
-  const navFlag = pickNavFlag(
+  const stackFlag = pickStackFlag(
     actionParams.activityParams as UnknownRecord | undefined
   );
 
-  if (!navFlag) {
+  if (!stackFlag) {
     // 플래그는 없지만 내부 키가 남아있다면, 호출부 params가 노출되지 않도록 제거합니다.
     if (
       Object.prototype.hasOwnProperty.call(
         actionParams.activityParams ?? {},
-        NAV_FLAG_FIELD
+        STACK_FLAG_FIELD
       )
     ) {
       actions.overrideActionParams({
@@ -150,7 +150,7 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({
     return true;
   };
 
-  switch (navFlag.flag) {
+  switch (stackFlag.flag) {
     case "SINGLE_TOP": {
       // 최상단이 동일하면 replace, 아니면 push.
       if (top?.name === actionParams.activityName) {
@@ -162,7 +162,7 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({
     }
     case "CLEAR_TOP": {
       // 대상이 스택에 있으면 위를 정리하고 replace, 없으면 새로 push.
-      if (!rewindToActivity(navFlag.activity)) {
+      if (!rewindToActivity(stackFlag.activity)) {
         dispatchPush(actionParams.activityName);
       }
       break;
@@ -175,12 +175,12 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({
     }
     case "JUMP_TO": {
       // 호출부 요청과 상관없이 지정된 액티비티로 이동.
-      dispatchPush(navFlag.activity);
+      dispatchPush(stackFlag.activity);
       break;
     }
     case "CLEAR_TOP_SINGLE_TOP": {
       // 먼저 CLEAR_TOP 시도, 실패하면 SINGLE_TOP 규칙 적용.
-      if (rewindToActivity(navFlag.activity)) {
+      if (rewindToActivity(stackFlag.activity)) {
         break;
       }
       if (top?.name === actionParams.activityName) {
@@ -191,7 +191,7 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({
       break;
     }
     case "JUMP_TO_CLEAR_TOP": {
-      const target = navFlag.activity;
+      const target = stackFlag.activity;
       if (rewindToActivity(target)) {
         break;
       }
@@ -205,9 +205,9 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({
   }
 };
 
-export const navFlagPlugin = (): StackflowReactPlugin => () => ({
-  key: "nav-flag-plugin",
+export const stackFlagPlugin = (): StackflowReactPlugin => () => ({
+  key: "stack-flag-plugin",
   onBeforePush: handleBeforePush,
 });
 
-export const NAV_FLAG_INTERNAL_FIELD = NAV_FLAG_FIELD;
+export const STACK_FLAG_INTERNAL_FIELD = STACK_FLAG_FIELD;

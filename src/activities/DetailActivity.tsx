@@ -47,7 +47,7 @@ const DetailActivity: ActivityComponentType<DetailActivityParams> = ({
                   "home",
                   { highlight: "Returned from Detail via CLEAR_STACK" },
                   {
-                    navFlag: { flag: "CLEAR_STACK" },
+                    stackFlag: { flag: "CLEAR_STACK" },
                   }
                 )
               }
@@ -61,7 +61,7 @@ const DetailActivity: ActivityComponentType<DetailActivityParams> = ({
                   "detail",
                   { id: params.id, title: "Prevent duplicates" },
                   {
-                    navFlag: { flag: "SINGLE_TOP" },
+                    stackFlag: { flag: "SINGLE_TOP" },
                   }
                 )
               }
