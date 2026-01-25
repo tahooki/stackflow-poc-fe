@@ -19,7 +19,7 @@ const pushWithFlag = (
   instance: ReturnType<typeof createTestStackflow>["instance"],
   activityName: string,
   flag: StackFlag,
-  params: Record<string, string | undefined> = {}
+  params: Record<string, string | undefined> = {},
 ) => {
   act(() => {
     instance.actions.push(activityName, {
@@ -118,17 +118,33 @@ describe("stackFlag plugin behavior", () => {
       plugins: [basicRendererPlugin(), stackFlagPlugin()],
     });
 
-    pushWithFlag(
-      instance,
-      "detail",
-      new StackFlagClearTopSingleTop("orders")
-    );
+    pushWithFlag(instance, "detail", new StackFlagClearTopSingleTop("orders"));
 
     const orders = instance.actions
       .getStack()
       .activities.find((activity) => activity.name === "orders");
 
     expect(orders).toBeUndefined();
+    expect(getTopActivity(instance)?.name).toBe("detail");
+  });
+
+  it("CLEAR_TOP_SINGLE_TOP rewinds when target exists", () => {
+    const { instance } = createTestStackflow({
+      plugins: [basicRendererPlugin(), stackFlagPlugin()],
+    });
+
+    act(() => {
+      instance.actions.push("detail", { id: "1" });
+      instance.actions.push("orders", { id: "2" });
+    });
+
+    pushWithFlag(instance, "detail", new StackFlagClearTopSingleTop("detail"));
+
+    const orders = instance.actions
+      .getStack()
+      .activities.find((activity) => activity.name === "orders");
+
+    expect(orders?.exitedBy?.name).toBe("Popped");
     expect(getTopActivity(instance)?.name).toBe("detail");
   });
 
@@ -142,17 +158,23 @@ describe("stackFlag plugin behavior", () => {
       instance.actions.push("orders", { id: "2" });
     });
 
-    pushWithFlag(
-      instance,
-      "orders",
-      new StackFlagJumpToClearTop("detail")
-    );
+    pushWithFlag(instance, "orders", new StackFlagJumpToClearTop("detail"));
 
     const orders = instance.actions
       .getStack()
       .activities.find((activity) => activity.name === "orders");
 
     expect(orders?.exitedBy?.name).toBe("Popped");
+    expect(getTopActivity(instance)?.name).toBe("detail");
+  });
+
+  it("JUMP_TO_CLEAR_TOP pushes target when missing", () => {
+    const { instance } = createTestStackflow({
+      plugins: [basicRendererPlugin(), stackFlagPlugin()],
+    });
+
+    pushWithFlag(instance, "orders", new StackFlagJumpToClearTop("detail"));
+
     expect(getTopActivity(instance)?.name).toBe("detail");
   });
 
