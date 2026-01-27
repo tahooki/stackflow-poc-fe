@@ -175,7 +175,8 @@ describe.sequential("useStackActions", () => {
             })
           }
         />
-      </>
+      </>,
+      "home"
     );
 
     act(() => {
