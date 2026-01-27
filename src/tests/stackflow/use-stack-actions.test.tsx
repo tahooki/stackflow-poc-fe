@@ -70,16 +70,18 @@ const ActionButton = ({ label, onClick }: ActionButtonProps) => {
   );
 };
 
+const wrapWithProvider = (ui: JSX.Element, scopeStackName?: StackName) => (
+  <StackProvider>
+    {scopeStackName ? (
+      <StackScopeProvider stackName={scopeStackName}>{ui}</StackScopeProvider>
+    ) : (
+      ui
+    )}
+  </StackProvider>
+);
+
 const renderWithProvider = (ui: JSX.Element, scopeStackName?: StackName) =>
-  render(
-    <StackProvider>
-      {scopeStackName ? (
-        <StackScopeProvider stackName={scopeStackName}>{ui}</StackScopeProvider>
-      ) : (
-        ui
-      )}
-    </StackProvider>
-  );
+  render(wrapWithProvider(ui, scopeStackName));
 
 const waitForActiveStack = async (stackName: StackName) => {
   await waitFor(() => {
@@ -158,25 +160,30 @@ describe.sequential("useStackActions", () => {
     expect(ordersTop?.params.id).toBe("200");
   });
 
-  it("push with flag replaces top activity and sanitizes params", () => {
-    renderWithProvider(
-      <>
-        <ActionButton
-          label="push-first"
-          onClick={({ push }) => push("detail", { params: { id: "1" } })}
-        />
-        <ActionButton
-          label="push-single-top"
-          onClick={({ push }) =>
-            push("detail", {
-              params: { id: "2" },
-              animate: false,
-              flag: new StackFlagSingleTop(),
-            })
-          }
-        />
-      </>,
-      "home"
+  it("push with flag replaces top activity and sanitizes params", async () => {
+    const renderResult = renderWithProvider(<div data-testid="stack-ready" />);
+
+    await waitForActiveStack("home");
+
+    renderResult.rerender(
+      wrapWithProvider(
+        <>
+          <ActionButton
+            label="push-first"
+            onClick={({ push }) => push("detail", { params: { id: "1" } })}
+          />
+          <ActionButton
+            label="push-single-top"
+            onClick={({ push }) =>
+              push("detail", {
+                params: { id: "2" },
+                animate: false,
+                flag: new StackFlagSingleTop(),
+              })
+            }
+          />
+        </>
+      )
     );
 
     act(() => {
