@@ -6,10 +6,17 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
+import { Cfg } from "../../config/Cfg";
+import {
+  StackProvider,
+  StackScopeProvider,
+  useStacks,
+} from "../../contexts/StackContext";
 import type { DetailActivityParams } from "../../activities/DetailActivity";
 import type { HomeActivityParams } from "../../activities/HomeActivity";
+import { useStackActions } from "../../hooks/useStackActions";
 import {
   StackFlagSingleTop,
   STACK_FLAG_INTERNAL_FIELD,
@@ -20,16 +27,6 @@ import type {
   StackRouteConfig,
 } from "../../stack/stackConfig";
 import type { StackManager, StackManagerConfig } from "../../stack/stackManager";
-
-type UseStackActionsType =
-  typeof import("../../hooks/useStackActions").useStackActions;
-type UseStackActionsReturn = ReturnType<UseStackActionsType>;
-type StackProviderType =
-  typeof import("../../contexts/StackContext").StackProvider;
-type StackScopeProviderType =
-  typeof import("../../contexts/StackContext").StackScopeProvider;
-type UseStacksType = typeof import("../../contexts/StackContext").useStacks;
-type CfgType = typeof import("../../config/Cfg").Cfg;
 
 const HomeActivityStub: ActivityComponentType<HomeActivityParams> = ({
   params,
@@ -71,14 +68,11 @@ const buildStackConfig = (): StackManagerConfig => ({
 
 type ActionButtonProps = {
   label: string;
-  onClick: (actions: UseStackActionsReturn) => void;
+  onClick: (actions: ReturnType<typeof useStackActions>) => void;
 };
 
 const ActionButton = ({ label, onClick }: ActionButtonProps) => {
-  if (!useStackActionsRef) {
-    throw new Error("useStackActions not initialized");
-  }
-  const actions = useStackActionsRef();
+  const actions = useStackActions();
   return (
     <button type="button" onClick={() => onClick(actions)}>
       {label}
@@ -88,39 +82,22 @@ const ActionButton = ({ label, onClick }: ActionButtonProps) => {
 
 let providerKey = 0;
 let stackManagerRef: StackManager | null = null;
-let StackProvider: StackProviderType | null = null;
-let StackScopeProvider: StackScopeProviderType | null = null;
-let useStacksRef: UseStacksType | null = null;
-let useStackActionsRef: UseStackActionsType | null = null;
-let CfgRef: CfgType | null = null;
 
 const StackManagerBridge = () => {
-  if (!useStacksRef) {
-    throw new Error("useStacks not initialized");
-  }
-  const { stackManager } = useStacksRef();
+  const { stackManager } = useStacks();
   stackManagerRef = stackManager;
   return null;
 };
 
-const wrapWithProvider = (ui: JSX.Element, scopeStackName?: StackName) => {
-  if (!StackProvider || !StackScopeProvider) {
-    throw new Error("StackProvider not initialized");
-  }
-
-  const Provider = StackProvider;
-  const ScopeProvider = StackScopeProvider;
-
-  return (
-    <Provider key={providerKey}>
-      {scopeStackName ? (
-        <ScopeProvider stackName={scopeStackName}>{ui}</ScopeProvider>
-      ) : (
-        ui
-      )}
-    </Provider>
-  );
-};
+const wrapWithProvider = (ui: JSX.Element, scopeStackName?: StackName) => (
+  <StackProvider key={providerKey}>
+    {scopeStackName ? (
+      <StackScopeProvider stackName={scopeStackName}>{ui}</StackScopeProvider>
+    ) : (
+      ui
+    )}
+  </StackProvider>
+);
 
 const renderWithProvider = (ui: JSX.Element, scopeStackName?: StackName) =>
   render(
@@ -156,23 +133,8 @@ const warmStack = async (stackName: StackName) => {
 };
 
 describe.sequential("useStackActions", () => {
-  beforeAll(async () => {
-    const cfgModule = await import("../../config/Cfg");
-    const stackContext = await import("../../contexts/StackContext");
-    const stackActions = await import("../../hooks/useStackActions");
-
-    CfgRef = cfgModule.Cfg;
-    StackProvider = stackContext.StackProvider;
-    StackScopeProvider = stackContext.StackScopeProvider;
-    useStacksRef = stackContext.useStacks;
-    useStackActionsRef = stackActions.useStackActions;
-  });
-
   beforeEach(() => {
-    if (!CfgRef) {
-      throw new Error("Cfg not initialized");
-    }
-    CfgRef.init({ stack: buildStackConfig() });
+    Cfg.init({ stack: buildStackConfig() });
     providerKey += 1;
     stackManagerRef = null;
   });
@@ -194,10 +156,7 @@ describe.sequential("useStackActions", () => {
       fireEvent.click(screen.getByRole("button", { name: "push-detail" }));
     });
 
-    const stackManager = stackManagerRef ?? CfgRef?.getStack();
-    if (!stackManager) {
-      throw new Error("Stack manager not initialized");
-    }
+    const stackManager = stackManagerRef ?? Cfg.getStack();
     expect(stackManager.getStackSwitchState().activeStack).toBe("orders");
 
     const ordersStack = stackManager.getStack("orders").actions.getStack();
@@ -228,10 +187,7 @@ describe.sequential("useStackActions", () => {
       fireEvent.click(screen.getByRole("button", { name: "push-orders" }));
     });
 
-    const stackManager = stackManagerRef ?? CfgRef?.getStack();
-    if (!stackManager) {
-      throw new Error("Stack manager not initialized");
-    }
+    const stackManager = stackManagerRef ?? Cfg.getStack();
     expect(stackManager.getStackSwitchState().activeStack).toBe("orders");
 
     const ordersStack = stackManager.getStack("orders").actions.getStack();
@@ -268,10 +224,7 @@ describe.sequential("useStackActions", () => {
       fireEvent.click(screen.getByRole("button", { name: "push-first" }));
     });
 
-    const stackManager = stackManagerRef ?? CfgRef?.getStack();
-    if (!stackManager) {
-      throw new Error("Stack manager not initialized");
-    }
+    const stackManager = stackManagerRef ?? Cfg.getStack();
     const initialStack = stackManager.getStack("home").actions.getStack();
     const initialTop =
       initialStack.activities[initialStack.activities.length - 1];
