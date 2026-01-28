@@ -1,6 +1,4 @@
 import type { ActivityComponentType } from "@stackflow/react";
-import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
 import {
   act,
   fireEvent,
@@ -10,7 +8,7 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import type { ConfigManager } from "../../config/Cfg";
+import { Cfg } from "../../config/Cfg";
 import {
   StackProvider,
   StackScopeProvider,
@@ -74,14 +72,6 @@ type ActionButtonProps = {
   onClick: (actions: ReturnType<typeof useStackActions>) => void;
 };
 
-const getCfg = (): ConfigManager => {
-  const cfg = globalThis.Cfg;
-  if (!cfg) {
-    throw new Error("Cfg is not available on globalThis.");
-  }
-  return cfg;
-};
-
 const ActionButton = ({ label, onClick }: ActionButtonProps) => {
   const actions = useStackActions();
   return (
@@ -89,25 +79,6 @@ const ActionButton = ({ label, onClick }: ActionButtonProps) => {
       {label}
     </button>
   );
-};
-
-const StackReadyGate = ({
-  stackName = "home",
-  children,
-}: {
-  stackName?: StackName;
-  children: ReactNode;
-}) => {
-  const { activeStack } = useStacks();
-  const [ready, setReady] = useState(() => activeStack === stackName);
-
-  useEffect(() => {
-    if (activeStack === stackName) {
-      setReady(true);
-    }
-  }, [activeStack, stackName]);
-
-  return ready ? <>{children}</> : null;
 };
 
 let providerKey = 0;
@@ -140,15 +111,22 @@ const renderWithProvider = (ui: JSX.Element, scopeStackName?: StackName) =>
     ),
   );
 
-const waitForActiveStack = async (stackName: StackName) => {
+const waitForStackManager = async () => {
   await waitFor(() => {
-    const viewport = document.querySelector(".stack-viewport");
-    expect(viewport?.getAttribute("data-active-stack")).toBe(stackName);
+    expect(stackManagerRef).not.toBeNull();
+  });
+  return stackManagerRef!;
+};
+
+const waitForActiveStack = async (stackName: StackName) => {
+  const stackManager = stackManagerRef ?? (await waitForStackManager());
+  await waitFor(() => {
+    expect(stackManager.getStackSwitchState().activeStack).toBe(stackName);
   });
 };
 
 const warmStack = async (stackName: StackName) => {
-  const stackManager = stackManagerRef ?? getCfg().getStack();
+  const stackManager = stackManagerRef ?? (await waitForStackManager());
   act(() => {
     stackManager.setActiveStack(stackName);
   });
@@ -157,22 +135,21 @@ const warmStack = async (stackName: StackName) => {
 
 describe.sequential("useStackActions", () => {
   beforeEach(() => {
-    getCfg().init({ stack: buildStackConfig() });
+    Cfg.init({ stack: buildStackConfig() });
     providerKey += 1;
     stackManagerRef = null;
   });
 
   it("uses stack scope as default target", async () => {
     renderWithProvider(
-      <StackReadyGate stackName="orders">
-        <ActionButton
-          label="push-detail"
-          onClick={({ push }) => push("detail", { params: { id: "100" } })}
-        />
-      </StackReadyGate>,
+      <ActionButton
+        label="push-detail"
+        onClick={({ push }) => push("detail", { params: { id: "100" } })}
+      />,
       "orders",
     );
 
+    await waitForStackManager();
     await warmStack("orders");
     await warmStack("home");
 
@@ -180,7 +157,7 @@ describe.sequential("useStackActions", () => {
       fireEvent.click(screen.getByRole("button", { name: "push-detail" }));
     });
 
-    const stackManager = getCfg().getStack();
+    const stackManager = stackManagerRef ?? Cfg.getStack();
     expect(stackManager.getStackSwitchState().activeStack).toBe("orders");
 
     const ordersStack = stackManager.getStack("orders").actions.getStack();
@@ -195,16 +172,15 @@ describe.sequential("useStackActions", () => {
 
   it("push with stack option switches active stack", async () => {
     renderWithProvider(
-      <StackReadyGate stackName="home">
-        <ActionButton
-          label="push-orders"
-          onClick={({ push }) =>
-            push("detail", { stack: "orders", params: { id: "200" } })
-          }
-        />
-      </StackReadyGate>,
+      <ActionButton
+        label="push-orders"
+        onClick={({ push }) =>
+          push("detail", { stack: "orders", params: { id: "200" } })
+        }
+      />,
     );
 
+    await waitForStackManager();
     await warmStack("orders");
     await warmStack("home");
 
@@ -212,7 +188,7 @@ describe.sequential("useStackActions", () => {
       fireEvent.click(screen.getByRole("button", { name: "push-orders" }));
     });
 
-    const stackManager = getCfg().getStack();
+    const stackManager = stackManagerRef ?? Cfg.getStack();
     expect(stackManager.getStackSwitchState().activeStack).toBe("orders");
 
     const ordersStack = stackManager.getStack("orders").actions.getStack();
@@ -223,31 +199,33 @@ describe.sequential("useStackActions", () => {
 
   it("push with flag replaces top activity and sanitizes params", async () => {
     renderWithProvider(
-      <StackReadyGate stackName="home">
-        <>
-          <ActionButton
-            label="push-first"
-            onClick={({ push }) => push("detail", { params: { id: "1" } })}
+      <>
+        <ActionButton
+          label="push-first"
+          onClick={({ push }) => push("detail", { params: { id: "1" } })}
+        />
+        <ActionButton
+          label="push-single-top"
+          onClick={({ push }) =>
+            push("detail", {
+              params: { id: "2" },
+              animate: false,
+              flag: new StackFlagSingleTop(),
+            })
+          }
           />
-          <ActionButton
-            label="push-single-top"
-            onClick={({ push }) =>
-              push("detail", {
-                params: { id: "2" },
-                animate: false,
-                flag: new StackFlagSingleTop(),
-              })
-            }
-          />
-        </>
-      </StackReadyGate>,
+        </>,
+      "home",
     );
+
+    await waitForStackManager();
+    await warmStack("home");
 
     act(() => {
       fireEvent.click(screen.getByRole("button", { name: "push-first" }));
     });
 
-    const stackManager = getCfg().getStack();
+    const stackManager = stackManagerRef ?? Cfg.getStack();
     const initialStack = stackManager.getStack("home").actions.getStack();
     const initialTop =
       initialStack.activities[initialStack.activities.length - 1];
