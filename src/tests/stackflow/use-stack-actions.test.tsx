@@ -10,7 +10,7 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { Cfg } from "../../config/Cfg";
+import type { ConfigManager } from "../../config/Cfg";
 import {
   StackProvider,
   StackScopeProvider,
@@ -72,6 +72,14 @@ const buildStackConfig = (): StackManagerConfig => ({
 type ActionButtonProps = {
   label: string;
   onClick: (actions: ReturnType<typeof useStackActions>) => void;
+};
+
+const getCfg = (): ConfigManager => {
+  const cfg = globalThis.Cfg;
+  if (!cfg) {
+    throw new Error("Cfg is not available on globalThis.");
+  }
+  return cfg;
 };
 
 const ActionButton = ({ label, onClick }: ActionButtonProps) => {
@@ -140,7 +148,7 @@ const waitForActiveStack = async (stackName: StackName) => {
 };
 
 const warmStack = async (stackName: StackName) => {
-  const stackManager = stackManagerRef ?? Cfg.getStack();
+  const stackManager = stackManagerRef ?? getCfg().getStack();
   act(() => {
     stackManager.setActiveStack(stackName);
   });
@@ -149,7 +157,7 @@ const warmStack = async (stackName: StackName) => {
 
 describe.sequential("useStackActions", () => {
   beforeEach(() => {
-    Cfg.init({ stack: buildStackConfig() });
+    getCfg().init({ stack: buildStackConfig() });
     providerKey += 1;
     stackManagerRef = null;
   });
@@ -172,7 +180,7 @@ describe.sequential("useStackActions", () => {
       fireEvent.click(screen.getByRole("button", { name: "push-detail" }));
     });
 
-    const stackManager = Cfg.getStack();
+    const stackManager = getCfg().getStack();
     expect(stackManager.getStackSwitchState().activeStack).toBe("orders");
 
     const ordersStack = stackManager.getStack("orders").actions.getStack();
@@ -204,7 +212,7 @@ describe.sequential("useStackActions", () => {
       fireEvent.click(screen.getByRole("button", { name: "push-orders" }));
     });
 
-    const stackManager = Cfg.getStack();
+    const stackManager = getCfg().getStack();
     expect(stackManager.getStackSwitchState().activeStack).toBe("orders");
 
     const ordersStack = stackManager.getStack("orders").actions.getStack();
@@ -239,7 +247,7 @@ describe.sequential("useStackActions", () => {
       fireEvent.click(screen.getByRole("button", { name: "push-first" }));
     });
 
-    const stackManager = Cfg.getStack();
+    const stackManager = getCfg().getStack();
     const initialStack = stackManager.getStack("home").actions.getStack();
     const initialTop =
       initialStack.activities[initialStack.activities.length - 1];
