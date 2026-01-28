@@ -55,11 +55,20 @@ export class ConfigManager {
   }
 }
 
-export const Cfg = new ConfigManager();
+const GLOBAL_CFG_KEY = "__STACKFLOW_CFG__";
+const globalCfg = globalThis as typeof globalThis & {
+  [GLOBAL_CFG_KEY]?: ConfigManager;
+  Cfg?: ConfigManager;
+};
+
+export const Cfg =
+  globalCfg[GLOBAL_CFG_KEY] ?? (globalCfg[GLOBAL_CFG_KEY] = new ConfigManager());
 
 declare global {
   // Optional global access for debugging and the referenced project structure.
   var Cfg: ConfigManager | undefined;
+  var __STACKFLOW_CFG__: ConfigManager | undefined;
 }
 
-globalThis.Cfg = Cfg;
+globalCfg.Cfg = Cfg;
+globalCfg[GLOBAL_CFG_KEY] = Cfg;
