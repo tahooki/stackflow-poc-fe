@@ -1,9 +1,21 @@
 import type { ActivityComponentType } from "@stackflow/react";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { Cfg } from "../../config/Cfg";
-import { StackProvider, StackScopeProvider } from "../../contexts/StackContext";
+import {
+  StackProvider,
+  StackScopeProvider,
+  useStacks,
+} from "../../contexts/StackContext";
 import type { DetailActivityParams } from "../../activities/DetailActivity";
 import type { HomeActivityParams } from "../../activities/HomeActivity";
 import { useStackActions } from "../../hooks/useStackActions";
@@ -70,6 +82,25 @@ const ActionButton = ({ label, onClick }: ActionButtonProps) => {
   );
 };
 
+const StackReadyGate = ({
+  stackName = "home",
+  children,
+}: {
+  stackName?: StackName;
+  children: ReactNode;
+}) => {
+  const { activeStack } = useStacks();
+  const [ready, setReady] = useState(() => activeStack === stackName);
+
+  useEffect(() => {
+    if (activeStack === stackName) {
+      setReady(true);
+    }
+  }, [activeStack, stackName]);
+
+  return ready ? <>{children}</> : null;
+};
+
 let providerKey = 0;
 
 const wrapWithProvider = (ui: JSX.Element, scopeStackName?: StackName) => (
@@ -108,11 +139,13 @@ describe.sequential("useStackActions", () => {
 
   it("uses stack scope as default target", async () => {
     renderWithProvider(
-      <ActionButton
-        label="push-detail"
-        onClick={({ push }) => push("detail", { params: { id: "100" } })}
-      />,
-      "orders"
+      <StackReadyGate stackName="orders">
+        <ActionButton
+          label="push-detail"
+          onClick={({ push }) => push("detail", { params: { id: "100" } })}
+        />
+      </StackReadyGate>,
+      "orders",
     );
 
     await warmStack("orders");
@@ -126,8 +159,7 @@ describe.sequential("useStackActions", () => {
     expect(stackManager.getStackSwitchState().activeStack).toBe("orders");
 
     const ordersStack = stackManager.getStack("orders").actions.getStack();
-    const ordersTop =
-      ordersStack.activities[ordersStack.activities.length - 1];
+    const ordersTop = ordersStack.activities[ordersStack.activities.length - 1];
     expect(ordersTop?.name).toBe("detail");
     expect(ordersTop?.params.id).toBe("100");
 
@@ -138,12 +170,14 @@ describe.sequential("useStackActions", () => {
 
   it("push with stack option switches active stack", async () => {
     renderWithProvider(
-      <ActionButton
-        label="push-orders"
-        onClick={({ push }) =>
-          push("detail", { stack: "orders", params: { id: "200" } })
-        }
-      />
+      <StackReadyGate stackName="home">
+        <ActionButton
+          label="push-orders"
+          onClick={({ push }) =>
+            push("detail", { stack: "orders", params: { id: "200" } })
+          }
+        />
+      </StackReadyGate>,
     );
 
     await warmStack("orders");
@@ -157,19 +191,14 @@ describe.sequential("useStackActions", () => {
     expect(stackManager.getStackSwitchState().activeStack).toBe("orders");
 
     const ordersStack = stackManager.getStack("orders").actions.getStack();
-    const ordersTop =
-      ordersStack.activities[ordersStack.activities.length - 1];
+    const ordersTop = ordersStack.activities[ordersStack.activities.length - 1];
     expect(ordersTop?.name).toBe("detail");
     expect(ordersTop?.params.id).toBe("200");
   });
 
   it("push with flag replaces top activity and sanitizes params", async () => {
-    const renderResult = renderWithProvider(<div data-testid="stack-ready" />);
-
-    await waitForActiveStack("home");
-
-    renderResult.rerender(
-      wrapWithProvider(
+    renderWithProvider(
+      <StackReadyGate stackName="home">
         <>
           <ActionButton
             label="push-first"
@@ -186,7 +215,7 @@ describe.sequential("useStackActions", () => {
             }
           />
         </>
-      )
+      </StackReadyGate>,
     );
 
     act(() => {
@@ -200,14 +229,12 @@ describe.sequential("useStackActions", () => {
     const initialTopId = initialTop?.id;
 
     act(() => {
-      fireEvent.click(
-        screen.getByRole("button", { name: "push-single-top" })
-      );
+      fireEvent.click(screen.getByRole("button", { name: "push-single-top" }));
     });
 
     const stack = stackManager.getStack("home").actions.getStack();
     const previousTop = stack.activities.find(
-      (activity) => activity.id === initialTopId
+      (activity) => activity.id === initialTopId,
     );
     const top = stack.activities[stack.activities.length - 1];
     const topParams = top?.params as Record<string, unknown> | undefined;
