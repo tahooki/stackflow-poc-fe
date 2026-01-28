@@ -6,17 +6,10 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Cfg } from "../../config/Cfg";
-import {
-  StackProvider,
-  StackScopeProvider,
-  useStacks,
-} from "../../contexts/StackContext";
 import type { DetailActivityParams } from "../../activities/DetailActivity";
 import type { HomeActivityParams } from "../../activities/HomeActivity";
-import { useStackActions } from "../../hooks/useStackActions";
 import {
   StackFlagSingleTop,
   STACK_FLAG_INTERNAL_FIELD,
@@ -26,8 +19,17 @@ import type {
   StackName,
   StackRouteConfig,
 } from "../../stack/stackConfig";
-import type { StackManagerConfig } from "../../stack/stackManager";
-import type { StackManager } from "../../stack/stackManager";
+import type { StackManager, StackManagerConfig } from "../../stack/stackManager";
+
+type UseStackActionsType =
+  typeof import("../../hooks/useStackActions").useStackActions;
+type UseStackActionsReturn = ReturnType<UseStackActionsType>;
+type StackProviderType =
+  typeof import("../../contexts/StackContext").StackProvider;
+type StackScopeProviderType =
+  typeof import("../../contexts/StackContext").StackScopeProvider;
+type UseStacksType = typeof import("../../contexts/StackContext").useStacks;
+type CfgType = typeof import("../../config/Cfg").Cfg;
 
 const HomeActivityStub: ActivityComponentType<HomeActivityParams> = ({
   params,
@@ -69,11 +71,14 @@ const buildStackConfig = (): StackManagerConfig => ({
 
 type ActionButtonProps = {
   label: string;
-  onClick: (actions: ReturnType<typeof useStackActions>) => void;
+  onClick: (actions: UseStackActionsReturn) => void;
 };
 
 const ActionButton = ({ label, onClick }: ActionButtonProps) => {
-  const actions = useStackActions();
+  if (!useStackActionsRef) {
+    throw new Error("useStackActions not initialized");
+  }
+  const actions = useStackActionsRef();
   return (
     <button type="button" onClick={() => onClick(actions)}>
       {label}
@@ -83,22 +88,39 @@ const ActionButton = ({ label, onClick }: ActionButtonProps) => {
 
 let providerKey = 0;
 let stackManagerRef: StackManager | null = null;
+let StackProvider: StackProviderType | null = null;
+let StackScopeProvider: StackScopeProviderType | null = null;
+let useStacksRef: UseStacksType | null = null;
+let useStackActionsRef: UseStackActionsType | null = null;
+let CfgRef: CfgType | null = null;
 
 const StackManagerBridge = () => {
-  const { stackManager } = useStacks();
+  if (!useStacksRef) {
+    throw new Error("useStacks not initialized");
+  }
+  const { stackManager } = useStacksRef();
   stackManagerRef = stackManager;
   return null;
 };
 
-const wrapWithProvider = (ui: JSX.Element, scopeStackName?: StackName) => (
-  <StackProvider key={providerKey}>
-    {scopeStackName ? (
-      <StackScopeProvider stackName={scopeStackName}>{ui}</StackScopeProvider>
-    ) : (
-      ui
-    )}
-  </StackProvider>
-);
+const wrapWithProvider = (ui: JSX.Element, scopeStackName?: StackName) => {
+  if (!StackProvider || !StackScopeProvider) {
+    throw new Error("StackProvider not initialized");
+  }
+
+  const Provider = StackProvider;
+  const ScopeProvider = StackScopeProvider;
+
+  return (
+    <Provider key={providerKey}>
+      {scopeStackName ? (
+        <ScopeProvider stackName={scopeStackName}>{ui}</ScopeProvider>
+      ) : (
+        ui
+      )}
+    </Provider>
+  );
+};
 
 const renderWithProvider = (ui: JSX.Element, scopeStackName?: StackName) =>
   render(
@@ -134,8 +156,19 @@ const warmStack = async (stackName: StackName) => {
 };
 
 describe.sequential("useStackActions", () => {
-  beforeEach(() => {
-    Cfg.init({ stack: buildStackConfig() });
+  beforeEach(async () => {
+    vi.resetModules();
+    const cfgModule = await import("../../config/Cfg");
+    const stackContext = await import("../../contexts/StackContext");
+    const stackActions = await import("../../hooks/useStackActions");
+
+    CfgRef = cfgModule.Cfg;
+    StackProvider = stackContext.StackProvider;
+    StackScopeProvider = stackContext.StackScopeProvider;
+    useStacksRef = stackContext.useStacks;
+    useStackActionsRef = stackActions.useStackActions;
+
+    CfgRef.init({ stack: buildStackConfig() });
     providerKey += 1;
     stackManagerRef = null;
   });
@@ -157,7 +190,10 @@ describe.sequential("useStackActions", () => {
       fireEvent.click(screen.getByRole("button", { name: "push-detail" }));
     });
 
-    const stackManager = stackManagerRef ?? Cfg.getStack();
+    const stackManager = stackManagerRef ?? CfgRef?.getStack();
+    if (!stackManager) {
+      throw new Error("Stack manager not initialized");
+    }
     expect(stackManager.getStackSwitchState().activeStack).toBe("orders");
 
     const ordersStack = stackManager.getStack("orders").actions.getStack();
@@ -188,7 +224,10 @@ describe.sequential("useStackActions", () => {
       fireEvent.click(screen.getByRole("button", { name: "push-orders" }));
     });
 
-    const stackManager = stackManagerRef ?? Cfg.getStack();
+    const stackManager = stackManagerRef ?? CfgRef?.getStack();
+    if (!stackManager) {
+      throw new Error("Stack manager not initialized");
+    }
     expect(stackManager.getStackSwitchState().activeStack).toBe("orders");
 
     const ordersStack = stackManager.getStack("orders").actions.getStack();
@@ -213,8 +252,8 @@ describe.sequential("useStackActions", () => {
               flag: new StackFlagSingleTop(),
             })
           }
-          />
-        </>,
+        />
+      </>,
       "home",
     );
 
@@ -225,7 +264,10 @@ describe.sequential("useStackActions", () => {
       fireEvent.click(screen.getByRole("button", { name: "push-first" }));
     });
 
-    const stackManager = stackManagerRef ?? Cfg.getStack();
+    const stackManager = stackManagerRef ?? CfgRef?.getStack();
+    if (!stackManager) {
+      throw new Error("Stack manager not initialized");
+    }
     const initialStack = stackManager.getStack("home").actions.getStack();
     const initialTop =
       initialStack.activities[initialStack.activities.length - 1];
