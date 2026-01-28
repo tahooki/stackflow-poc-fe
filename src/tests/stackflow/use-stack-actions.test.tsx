@@ -6,7 +6,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { DetailActivityParams } from "../../activities/DetailActivity";
 import type { HomeActivityParams } from "../../activities/HomeActivity";
@@ -156,8 +156,7 @@ const warmStack = async (stackName: StackName) => {
 };
 
 describe.sequential("useStackActions", () => {
-  beforeEach(async () => {
-    vi.resetModules();
+  beforeAll(async () => {
     const cfgModule = await import("../../config/Cfg");
     const stackContext = await import("../../contexts/StackContext");
     const stackActions = await import("../../hooks/useStackActions");
@@ -167,7 +166,12 @@ describe.sequential("useStackActions", () => {
     StackScopeProvider = stackContext.StackScopeProvider;
     useStacksRef = stackContext.useStacks;
     useStackActionsRef = stackActions.useStackActions;
+  });
 
+  beforeEach(() => {
+    if (!CfgRef) {
+      throw new Error("Cfg not initialized");
+    }
     CfgRef.init({ stack: buildStackConfig() });
     providerKey += 1;
     stackManagerRef = null;
