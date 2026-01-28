@@ -29,6 +29,7 @@ import type {
   StackRouteConfig,
 } from "../../stack/stackConfig";
 import type { StackManagerConfig } from "../../stack/stackManager";
+import type { StackManager } from "../../stack/stackManager";
 
 const HomeActivityStub: ActivityComponentType<HomeActivityParams> = ({
   params,
@@ -102,6 +103,13 @@ const StackReadyGate = ({
 };
 
 let providerKey = 0;
+let stackManagerRef: StackManager | null = null;
+
+const StackManagerBridge = () => {
+  const { stackManager } = useStacks();
+  stackManagerRef = stackManager;
+  return null;
+};
 
 const wrapWithProvider = (ui: JSX.Element, scopeStackName?: StackName) => (
   <StackProvider key={providerKey}>
@@ -114,7 +122,15 @@ const wrapWithProvider = (ui: JSX.Element, scopeStackName?: StackName) => (
 );
 
 const renderWithProvider = (ui: JSX.Element, scopeStackName?: StackName) =>
-  render(wrapWithProvider(ui, scopeStackName));
+  render(
+    wrapWithProvider(
+      <>
+        <StackManagerBridge />
+        {ui}
+      </>,
+      scopeStackName,
+    ),
+  );
 
 const waitForActiveStack = async (stackName: StackName) => {
   await waitFor(() => {
@@ -124,7 +140,7 @@ const waitForActiveStack = async (stackName: StackName) => {
 };
 
 const warmStack = async (stackName: StackName) => {
-  const stackManager = Cfg.getStack();
+  const stackManager = stackManagerRef ?? Cfg.getStack();
   act(() => {
     stackManager.setActiveStack(stackName);
   });
@@ -135,6 +151,7 @@ describe.sequential("useStackActions", () => {
   beforeEach(() => {
     Cfg.init({ stack: buildStackConfig() });
     providerKey += 1;
+    stackManagerRef = null;
   });
 
   it("uses stack scope as default target", async () => {
