@@ -6,7 +6,24 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../config/Cfg", async () => {
+  const actual = await vi.importActual<typeof import("../../config/Cfg")>(
+    "../../config/Cfg",
+  );
+  const cfg = new actual.ConfigManager();
+  const globalCfg = globalThis as typeof globalThis & {
+    __STACKFLOW_CFG__?: typeof cfg;
+    Cfg?: typeof cfg;
+  };
+  globalCfg.__STACKFLOW_CFG__ = cfg;
+  globalCfg.Cfg = cfg;
+  return {
+    ...actual,
+    Cfg: cfg,
+  };
+});
 
 import { Cfg } from "../../config/Cfg";
 import {
