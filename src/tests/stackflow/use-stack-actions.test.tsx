@@ -70,8 +70,10 @@ const ActionButton = ({ label, onClick }: ActionButtonProps) => {
   );
 };
 
+let providerKey = 0;
+
 const wrapWithProvider = (ui: JSX.Element, scopeStackName?: StackName) => (
-  <StackProvider>
+  <StackProvider key={providerKey}>
     {scopeStackName ? (
       <StackScopeProvider stackName={scopeStackName}>{ui}</StackScopeProvider>
     ) : (
@@ -101,6 +103,7 @@ const warmStack = async (stackName: StackName) => {
 describe.sequential("useStackActions", () => {
   beforeEach(() => {
     Cfg.init({ stack: buildStackConfig() });
+    providerKey += 1;
   });
 
   it("uses stack scope as default target", async () => {
