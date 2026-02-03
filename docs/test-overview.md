@@ -33,6 +33,62 @@
 - 스택 관리자 동작이 일관된다: 활성 스택 전환, 히스토리 기록/복원, 초기 스택 리셋이 안정적으로 동작한다.
 - 액션 훅이 올바른 스택을 대상으로 작동한다: `useStackActions`가 스코프/옵션에 맞는 스택으로 이동시킨다.
 
+## 사용자 관점 상세 (it 기준)
+
+**`src/tests/stackflow/basic.test.tsx`**
+- `initializes with a single root activity`: 앱 첫 진입 시 빈 화면 없이 루트 화면이 정상 노출된다.
+- `push updates top activity and params`: 화면 이동 시 파라미터가 정상 전달되어 상세 화면에 올바른 데이터가 표시된다.
+- `replace marks previous activity as exited and enters new activity`: replace 이동에서 이전 화면이 정상 종료되어 겹침/잔상이 없다.
+- `pop returns to previous activity`: 뒤로가기 시 직전 화면으로 정확히 복귀한다.
+- `pop is a no-op on root-only stack`: 루트에서 뒤로가기 시 앱이 빈 상태가 되지 않는다.
+- `skipEnterActiveState forces enter-done`: 애니메이션 없는 진입에서도 화면이 멈추지 않고 바로 표시된다.
+- `skipExitActiveState forces exit-done`: 애니메이션 없는 이탈에서도 이전 화면이 DOM에 남지 않는다.
+- `transitions set loading then return to idle`: 전환 상태가 끝나지 않고 멈추는 현상을 방지한다.
+- `stepPush/stepReplace/stepPop follow step rules`: 한 화면 내 단계 이동(예: 결제 단계)에서 단계/파라미터가 일관된다.
+- `stepPop is no-op when only one step exists`: 단계가 1개뿐일 때 잘못된 이전 단계로 이동하지 않는다.
+- `pause queues events and resume applies them`: 백그라운드/포그라운드 전환 시 누락된 이동이 복구된다.
+- `reuses activity index when activityId is duplicated`: 동일 ID 재사용 시 화면이 중복 생성되지 않아 상태가 꼬이지 않는다.
+
+**`src/tests/stackflow/depth-renderer.test.tsx`**
+- `limits rendered activities to maxVisible`: 스택이 커져도 화면 렌더링 수를 제한해 성능 저하를 막는다.
+- `resets floorIndex when depth drops under maxVisible`: 뒤로가기 후 이전 화면이 다시 보이도록 복원된다.
+- `filters out exit-done activities`: 종료된 화면이 DOM에 남아 이벤트 충돌을 일으키지 않는다.
+- `renders all activities when maxVisible is zero`: 제한을 끌 수 있어 디버깅/특수 화면 노출이 가능하다.
+
+**`src/tests/stackflow/flags.test.tsx`**
+- `sanitizes stackFlag payload from params`: 내부 플래그가 화면 파라미터에 노출되지 않아 데이터 오염을 막는다.
+- `SINGLE_TOP creates a new top activity when top matches`: 동일 화면 재진입 정책이 정의된 대로 실행되어 상태 갱신이 가능하다.
+- `CLEAR_TOP rewinds to target activity`: 중간 화면을 정리하고 지정 화면으로 빠르게 복귀한다.
+- `CLEAR_STACK clears all and pushes new activity`: 전체 스택 리셋(예: 로그아웃/온보딩 재시작)이 가능하다.
+- `JUMP_TO forces navigation to target activity`: 호출 위치와 무관하게 지정 화면으로 바로 이동한다.
+- `CLEAR_TOP_SINGLE_TOP falls back to SINGLE_TOP when target is missing`: 대상이 없어도 안전하게 이동이 계속된다.
+- `CLEAR_TOP_SINGLE_TOP rewinds when target exists`: 대상이 있을 땐 중복 없이 복귀한다.
+- `JUMP_TO_CLEAR_TOP rewinds when target exists`: 대상이 있을 땐 정리 후 진입한다.
+- `JUMP_TO_CLEAR_TOP pushes target when missing`: 대상이 없으면 새로 진입해 이동이 실패하지 않는다.
+- `without plugin, stackFlag payload stays in params`: 플러그인 미설치 시 동작/데이터가 예측 가능하다.
+
+**`src/tests/stackflow/multi-stack.test.tsx`**
+- `maintains independent histories per stack instance`: 다른 탭/스택의 이동이 내 스택에 영향을 주지 않는다.
+
+**`src/tests/stackflow/plugin.test.tsx`**
+- `fires before/after hooks for push`: 이동 전후 훅으로 가드/로깅/분석이 정상 동작한다.
+- `preventDefault stops pop`: 저장되지 않은 변경 등에서 뒤로가기를 막을 수 있다.
+
+**`src/tests/stackflow/scroll.test.tsx`**
+- `keeps scroll position when returning to previous activity`: 목록으로 돌아왔을 때 스크롤 위치가 유지된다.
+
+**`src/tests/stackflow/stack-manager.test.ts`**
+- `builds stacks and exposes config entries`: 설정한 스택이 실제로 생성되어 화면 구성 누락을 막는다.
+- `applies depthRenderer overrides when creating stacks`: 스택별 렌더링 제한이 적용되어 성능 정책을 지킨다.
+- `tracks active stack changes and notifies subscribers`: 탭 전환 등에서 UI가 즉시 반응한다.
+- `honors recordHistory false and pops history`: 히스토리 기록 옵션이 정확히 반영되어 뒤로가기 동작이 예측 가능하다.
+- `resets to init stack and clears history`: 초기 화면으로 확실히 복귀해 흐름을 재시작할 수 있다.
+
+**`src/tests/stackflow/use-stack-actions.test.tsx`**
+- `uses stack scope as default target`: 스코프 내부 액션이 올바른 스택으로 이동해 잘못된 탭 전환을 막는다.
+- `push with stack option switches active stack`: 명시한 스택으로 이동하면서 활성 탭이 올바르게 전환된다.
+- `push with flag replaces top activity and sanitizes params`: 플래그가 적용되고 내부 파라미터가 제거되어 화면 상태가 깨지지 않는다.
+
 ## 실행
 
 - `npm test`
