@@ -19,15 +19,16 @@ export const createStackflowInstance = ({
   stackName,
   initialActivity,
   routes,
-  depthRenderer,
+  maxVisible,
 }: {
   stackName: StackName;
   initialActivity: ActivityName;
   routes: ReadonlyArray<StackRouteConfig>;
-  depthRenderer?: { maxVisible: number };
+  maxVisible?: number;
 }): StackInstance => {
-  const rendererPlugin = depthRenderer
-    ? depthRendererPlugin(depthRenderer)
+  const rendererPlugin =
+    maxVisible !== undefined
+      ? depthRendererPlugin({ maxVisible })
     : basicRendererPlugin();
 
   const instance = stackflow<ActivityRegistry>({
@@ -40,7 +41,9 @@ export const createStackflowInstance = ({
         theme: "android",
       }),
       stackFlagPlugin(),
-      ...(depthRenderer ? [depthBackPolicyPlugin(depthRenderer)] : []),
+      ...(maxVisible !== undefined
+        ? [depthBackPolicyPlugin({ maxVisible })]
+        : []),
       layerStackPlugin(stackName),
     ],
   });

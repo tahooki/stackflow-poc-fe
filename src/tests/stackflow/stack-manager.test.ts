@@ -7,7 +7,10 @@ import type {
   StackName,
   StackRouteConfig,
 } from "../../stack/stackConfig";
-import { StackManager, type StackManagerConfig } from "../../stack/stackManager";
+import {
+  StackManager,
+  type StackManagerConfig,
+} from "../../stack/stackManager";
 
 vi.mock("../../lib/stack/createStackflowInstance", () => ({
   createStackflowInstance: vi.fn(),
@@ -34,7 +37,7 @@ const stackList = [
 ] as const satisfies ReadonlyArray<StackConfigEntry>;
 
 const buildConfig = (
-  overrides?: Partial<StackManagerConfig>
+  overrides?: Partial<StackManagerConfig>,
 ): StackManagerConfig => ({
   initStack: "home",
   stackList,
@@ -91,14 +94,14 @@ describe("StackManager", () => {
     });
 
     const homeCall = createStackflowInstanceMock.mock.calls.find(
-      ([args]) => args.stackName === "home"
+      ([args]) => args.stackName === "home",
     );
     const ordersCall = createStackflowInstanceMock.mock.calls.find(
-      ([args]) => args.stackName === "orders"
+      ([args]) => args.stackName === "orders",
     );
 
-    expect(homeCall?.[0].depthRenderer).toEqual({ maxVisible: 5 });
-    expect(ordersCall?.[0].depthRenderer).toEqual({ maxVisible: 2 });
+    expect(homeCall?.[0].maxVisible).toBe(5);
+    expect(ordersCall?.[0].maxVisible).toBe(2);
   });
 
   it("tracks active stack changes and notifies subscribers", () => {

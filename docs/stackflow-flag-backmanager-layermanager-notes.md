@@ -6,13 +6,15 @@
 ## 1) 큰 그림 요약
 
 - Stackflow는 스택형 내비게이션을 제공하고, 플러그인으로 동작을 확장한다.
-- Flag 패턴(navFlag)은 push 전에 동작을 가로채서 pop/replace/push 시퀀스를 직접 만든다.
+- StackFlag 패턴은 push 전에 동작을 가로채서 pop/replace/push 시퀀스를 직접 만든다.
 - LayerManager는 Activity/Step/Overlay를 하나의 레이어 스택으로 관리한다.
 - BackManager는 레이어 pop 결과에 따라 stack 히스토리를 처리한다.
 
 관련 파일
+
 - `src/lib/stack/createStackflowInstance.ts`
-- `src/plugins/navFlagPlugin.ts`
+- `src/plugins/stackFlagPlugin.ts`
+- `src/hooks/useStackActions.ts`
 - `src/lib/layerManager.ts`
 - `src/lib/backManager.ts`
 
@@ -29,7 +31,7 @@ const instance = stackflow<ActivityRegistry>({
   plugins: [
     rendererPlugin,
     basicUIPlugin({ theme: "android" }),
-    navFlagPlugin(),
+    stackFlagPlugin(),
     ...(depthRenderer ? [depthBackPolicyPlugin(depthRenderer)] : []),
     layerStackPlugin(stackName),
   ],
@@ -37,27 +39,48 @@ const instance = stackflow<ActivityRegistry>({
 ```
 
 포인트
-- `navFlagPlugin`은 push 이전 훅을 등록한다.
+
+- `stackFlagPlugin`은 push 이전 훅을 등록한다.
 - `layerStackPlugin`은 Stack 상태를 LayerManager에 동기화한다.
 
-## 3) Flag 패턴 개요
+## 3) StackFlag 패턴 개요
 
-### 3-1. 호출부에서 navFlag 주입
+### 3-1. 호출부에서 stackFlag 인스턴스 주입
 
-`useStackActions.push`는 내부 키(`__navFlag`)로 payload에 플래그를 숨겨 넣는다.
+`useStackActions.push`는 `push(activity, { params, flag, stack, animate })` 형태로 옵션을 묶고,
+`options.flag`로 전달된 StackFlag 인스턴스를 내부 키(`__stackFlag`)로 payload에 숨겨 넣는다.
+호출부는 문자열이 아닌 class 인스턴스를 넘겨야 한다.
 
 ```ts
 // src/hooks/useStackActions.ts
+const params = options?.params;
+const stackFlag = options?.flag;
+const { animate } = options ?? {};
 const payload =
-  navFlag && params && typeof params === "object"
-    ? { ...params, [NAV_FLAG_INTERNAL_FIELD]: navFlag }
-    : navFlag
-    ? { [NAV_FLAG_INTERNAL_FIELD]: navFlag }
-    : params;
+  stackFlag && params && typeof params === "object"
+    ? { ...(params as UnknownRecord), [STACK_FLAG_INTERNAL_FIELD]: stackFlag }
+    : stackFlag
+      ? { [STACK_FLAG_INTERNAL_FIELD]: stackFlag }
+      : params;
 
+const baseOptions = typeof animate === "boolean" ? { animate } : undefined;
 return stackManager
   .getStack(targetStack)
-  .actions.push(activityName, payload, baseOptions);
+  .actions.push(activityName, payload || {}, baseOptions);
+```
+
+```ts
+// 호출 예시
+push("detail", {
+  params: { id: "1" },
+  flag: new StackFlagSingleTop(),
+  animate: true,
+});
+
+push("orders", {
+  params: { id: "2" },
+  flag: new StackFlagClearTop("detail"),
+});
 ```
 
 ### 3-2. 플러그인에서 플래그 처리
@@ -65,39 +88,43 @@ return stackManager
 `onBeforePush` 훅에서 기본 push를 막고 직접 이벤트를 dispatch한다.
 
 ```ts
-// src/plugins/navFlagPlugin.ts
+// src/plugins/stackFlagPlugin.ts
 const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({
   actionParams,
   actions,
 }) => {
-  const navFlag = pickNavFlag(actionParams.activityParams as UnknownRecord);
+  const stackFlag = pickStackFlag(actionParams.activityParams as UnknownRecord);
 
-  if (!navFlag) {
-    if (Object.prototype.hasOwnProperty.call(
-      actionParams.activityParams ?? {},
-      NAV_FLAG_FIELD
-    )) {
+  if (!stackFlag) {
+    if (
+      Object.prototype.hasOwnProperty.call(
+        actionParams.activityParams ?? {},
+        STACK_FLAG_FIELD,
+      )
+    ) {
       actions.overrideActionParams({
         ...actionParams,
-        activityParams: sanitizeRecord(actionParams.activityParams as UnknownRecord),
+        activityParams: sanitizeRecord(
+          actionParams.activityParams as UnknownRecord,
+        ),
       });
     }
     return;
   }
 
   actions.preventDefault();
-  // ... 이후 navFlag에 따라 dispatchPush/dispatchReplace/dispatchPopTimes 실행
+  // ... 이후 stackFlag에 따라 dispatchPush/dispatchReplace/dispatchPopTimes 실행
 };
 ```
 
 ### 3-3. Flag별 처리 요약
 
-- `SINGLE_TOP`: top 동일 시 replace, 아니면 push.
-- `CLEAR_TOP`: 스택에 target이 있으면 그 위 pop 후 replace.
-- `CLEAR_STACK`: 전체 pop 후 push.
-- `JUMP_TO`: 호출부와 무관하게 지정 activity push.
-- `CLEAR_TOP_SINGLE_TOP`: CLEAR_TOP 실패 시 SINGLE_TOP 규칙.
-- `JUMP_TO_CLEAR_TOP`: 있으면 pop+replace, 없으면 push.
+- `StackFlagSingleTop`: top 동일 시 replace, 아니면 push.
+- `StackFlagClearTop(activity)`: 스택에 target이 있으면 그 위 pop 후 replace.
+- `StackFlagClearStack`: 전체 pop 후 push.
+- `StackFlagJumpTo(activity)`: 호출부와 무관하게 지정 activity push.
+- `StackFlagClearTopSingleTop(activity)`: CLEAR_TOP 실패 시 SINGLE_TOP 규칙.
+- `StackFlagJumpToClearTop(activity)`: 있으면 pop+replace, 없으면 push.
 
 ## 4) LayerManager 동작
 
@@ -197,9 +224,7 @@ BackManager는 레이어 결과가 exit일 때만 스택 히스토리를 조정�
 ```ts
 // src/lib/backManager.ts
 const activeStack = this.stackManager.getStackSwitchState().activeStack;
-const result = await this.layerManager
-  .getController(activeStack)
-  .popTopLayer();
+const result = await this.layerManager.getController(activeStack).popTopLayer();
 
 if (result.popped !== "exit") return result;
 
@@ -242,6 +267,7 @@ const handler = async () => {
 - Back 버튼/브라우저 back으로 pop 순서 확인.
 
 관련 파일
+
 - `src/activities/HomeActivity.tsx`
 - `src/components/LayerStackDevtools.tsx`
 - `src/components/BackBridgeButton.tsx`
@@ -249,7 +275,6 @@ const handler = async () => {
 ## 8) 빠른 요약 (한 문장씩)
 
 - Stackflow는 플러그인으로 행동을 바꾸는 스택 네비게이션이다.
-- navFlag는 push 전에 동작을 재정의해 모바일 UX를 맞춘다.
+- stackFlag는 push 전에 동작을 재정의해 모바일 UX를 맞춘다.
 - LayerManager는 UI 레이어를 스택처럼 정렬하고 top 판단을 제공한다.
 - BackManager는 레이어 pop 결과를 기준으로 stack 히스토리를 조정한다.
-

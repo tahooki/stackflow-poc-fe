@@ -124,7 +124,7 @@ export class StackManager {
         stackName: stackConfig.name,
         initialActivity: stackConfig.initialActivity,
         routes: stackConfig.activities,
-        depthRenderer: maxVisible ? { maxVisible } : undefined,
+        maxVisible,
       });
       return acc;
     }, {} as Record<StackName, StackInstance>);
