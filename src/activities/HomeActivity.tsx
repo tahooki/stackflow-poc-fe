@@ -25,11 +25,15 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
 }: {
   params: HomeActivityParams;
 }) => {
-  const { push } = useStackActions();
+  const { getStack, push } = useStackActions();
   const heroMessage = useMemo(
     () => messages[Math.floor(Math.random() * messages.length)],
     []
   );
+  const makeDetailPayload = (label: string) => ({
+    id: String(Date.now()),
+    title: `Home test: ${label}`,
+  });
 
   return (
     <AppScreen appBar={{ title: "Home" }}>
@@ -52,6 +56,32 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
               }
             >
               Push detail screen (baseline)
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                push("detail", {
+                  params: makeDetailPayload("animate=false"),
+                  animate: false,
+                })
+              }
+            >
+              Push detail screen (animate: false)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const payload = makeDetailPayload("dispatchEvent skipEnter");
+
+                getStack().actions.dispatchEvent("Pushed", {
+                  activityId: `home-skip-${payload.id}`,
+                  activityName: "detail",
+                  activityParams: payload,
+                  skipEnterActiveState: true,
+                });
+              }}
+            >
+              DispatchEvent push (skipEnterActiveState)
             </button>
             <button
               type="button"
@@ -125,6 +155,10 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
         <section className="activity__card">
           <h2>Helpful Hints</h2>
           <ul className="activity__list">
+            <li>
+              Compare the three Detail buttons above to see baseline vs skipped
+              enter transitions.
+            </li>
             <li>Swipe from the left edge on mobile to pop the stack.</li>
             <li>
               Use the browser back button to confirm history synchronization.

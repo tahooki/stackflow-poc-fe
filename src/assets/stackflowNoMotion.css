@@ -1,0 +1,9 @@
+:root[data-stackflow-no-motion="true"] [data-stackflow-component-name] {
+  transition: none !important;
+  animation: none !important;
+}
+
+:root[data-stackflow-no-motion="true"] [data-stackflow-component-name] [data-part] {
+  transition: none !important;
+  animation: none !important;
+}

@@ -1,5 +1,7 @@
 import type { StackflowReactPlugin } from "@stackflow/react";
 
+import { withTemporaryStackflowNoMotion } from "../lib/stack/stackflowNoMotion";
+
 export type DepthBackPolicyOptions = {
   maxVisible: number;
 };
@@ -40,9 +42,11 @@ export const depthBackPolicyPlugin =
 
         actions.preventDefault();
         // Skip to root when the stack is about to reveal hidden screens.
-        for (let i = 0; i < activeCount - 1; i += 1) {
-          actions.dispatchEvent("Popped", { skipExitActiveState: true });
-        }
+        withTemporaryStackflowNoMotion(() => {
+          for (let i = 0; i < activeCount - 1; i += 1) {
+            actions.dispatchEvent("Popped", { skipExitActiveState: true });
+          }
+        });
         // Reset the floor so the next cycle starts fresh.
         floorIndex = 0;
       },

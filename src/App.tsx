@@ -1,5 +1,6 @@
 import "@stackflow/plugin-basic-ui/index.css";
 import "./App.css";
+import "./assets/stackflowNoMotion.css";
 
 import { useEffect, useState } from "react";
 

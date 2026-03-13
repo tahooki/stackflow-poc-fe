@@ -6,6 +6,12 @@ import { stackFlagPlugin } from "../../plugins/stackFlagPlugin";
 import { layerStackPlugin } from "../../plugins/layerStackPlugin";
 import { depthRendererPlugin } from "../../plugins/depthRendererPlugin";
 import { depthBackPolicyPlugin } from "../../plugins/depthBackPolicyPlugin";
+import {
+  shouldSuppressMotionForAnimateOption,
+  shouldSuppressMotionForDispatchEvent,
+  shouldSuppressMotionForPopArgs,
+  withTemporaryStackflowNoMotion,
+} from "./stackflowNoMotion";
 import type {
   ActivityName,
   ActivityRegistry,
@@ -38,7 +44,7 @@ export const createStackflowInstance = ({
     plugins: [
       rendererPlugin,
       basicUIPlugin({
-        theme: "android",
+        theme: "cupertino",
       }),
       stackFlagPlugin(),
       ...(maxVisible !== undefined
@@ -51,6 +57,54 @@ export const createStackflowInstance = ({
   routes.forEach(({ name, activity }) => {
     instance.addActivity({ name, component: activity });
   });
+
+  const originalDispatchEvent = instance.actions.dispatchEvent;
+  const originalPush = instance.actions.push;
+  const originalReplace = instance.actions.replace;
+  const originalPop = instance.actions.pop;
+
+  instance.actions.dispatchEvent = ((name, parameters) => {
+    if (
+      shouldSuppressMotionForDispatchEvent(
+        name,
+        parameters as Record<string, unknown> | undefined,
+      )
+    ) {
+      return withTemporaryStackflowNoMotion(() =>
+        originalDispatchEvent(name, parameters),
+      );
+    }
+
+    return originalDispatchEvent(name, parameters);
+  }) as typeof instance.actions.dispatchEvent;
+
+  instance.actions.push = ((activityName, activityParams, options) => {
+    if (shouldSuppressMotionForAnimateOption(options)) {
+      return withTemporaryStackflowNoMotion(() =>
+        originalPush(activityName, activityParams, options),
+      );
+    }
+
+    return originalPush(activityName, activityParams, options);
+  }) as typeof instance.actions.push;
+
+  instance.actions.replace = ((activityName, activityParams, options) => {
+    if (shouldSuppressMotionForAnimateOption(options)) {
+      return withTemporaryStackflowNoMotion(() =>
+        originalReplace(activityName, activityParams, options),
+      );
+    }
+
+    return originalReplace(activityName, activityParams, options);
+  }) as typeof instance.actions.replace;
+
+  instance.actions.pop = ((count, options) => {
+    if (shouldSuppressMotionForPopArgs(count, options)) {
+      return withTemporaryStackflowNoMotion(() => originalPop(count, options));
+    }
+
+    return originalPop(count, options);
+  }) as typeof instance.actions.pop;
 
   return instance;
 };
