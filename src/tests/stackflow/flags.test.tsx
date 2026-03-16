@@ -13,19 +13,23 @@ import {
   StackFlagSingleTop,
   type StackFlag,
 } from "../../plugins/stackFlagPlugin";
-import { createTestStackflow, getTopActivity } from "./helpers";
+import {
+  createTestStackflow,
+  getTopActivity,
+} from "./helpers";
 
 const pushWithFlag = (
   instance: ReturnType<typeof createTestStackflow>["instance"],
   activityName: string,
   flag: StackFlag,
   params: Record<string, string | undefined> = {},
+  options?: { animate?: boolean },
 ) => {
   act(() => {
     instance.actions.push(activityName, {
       ...params,
       [STACK_FLAG_INTERNAL_FIELD]: flag,
-    });
+    }, options);
   });
 };
 
@@ -101,6 +105,37 @@ describe("stackFlag plugin behavior", () => {
     expect(detail?.exitedBy?.name).toBe("Popped");
     expect(orders?.exitedBy?.name).toBe("Popped");
     expect(getTopActivity(instance)?.name).toBe("snapshot");
+  });
+
+  it("CLEAR_STACK with animate false skips exit-active on cleared activities", () => {
+    const { instance } = createTestStackflow({
+      transitionDuration: 150,
+      plugins: [basicRendererPlugin(), stackFlagPlugin()],
+    });
+
+    act(() => {
+      instance.actions.push("detail", { id: "1" });
+      instance.actions.push("orders", { id: "2" });
+    });
+
+    pushWithFlag(
+      instance,
+      "snapshot",
+      new StackFlagClearStack(),
+      {},
+      { animate: false },
+    );
+
+    const detail = instance.actions
+      .getStack()
+      .activities.find((activity) => activity.name === "detail");
+    const orders = instance.actions
+      .getStack()
+      .activities.find((activity) => activity.name === "orders");
+
+    expect(detail?.transitionState).toBe("exit-done");
+    expect(orders?.transitionState).toBe("exit-done");
+    expect(getTopActivity(instance)?.transitionState).toBe("enter-done");
   });
 
   it("JUMP_TO forces navigation to target activity", () => {

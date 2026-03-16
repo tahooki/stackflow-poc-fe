@@ -150,7 +150,11 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({
   ) as ActivityContextShape | undefined;
 
   const stack = actions.getStack();
-  const top = stack.activities[stack.activities.length - 1];
+  const activeActivities = stack.activities.filter(
+    (activity) => activity.transitionState !== "exit-done"
+  );
+  const top = activeActivities[activeActivities.length - 1];
+  const shouldSkipExitActiveState = actionParams.skipEnterActiveState === true;
 
   const dispatchPush = (activityName: string) => {
     actions.dispatchEvent("Pushed", {
@@ -172,10 +176,13 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({
     });
   };
 
-  const dispatchPopTimes = (count: number) => {
+  const dispatchPopTimes = (
+    count: number,
+    skipExitActiveState = shouldSkipExitActiveState
+  ) => {
     for (let i = 0; i < count; i += 1) {
       actions.dispatchEvent("Popped", {
-        skipExitActiveState: false,
+        skipExitActiveState,
       });
     }
   };
@@ -216,9 +223,12 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({
       break;
     }
     case "CLEAR_STACK": {
-      // 전체 스택을 비운 뒤 새 액티비티를 push.
-      dispatchPopTimes(stack.activities.length);
-      dispatchPush(actionParams.activityName);
+      // 루트 위는 pop으로 비우고, 마지막 루트는 replace로 교체합니다.
+      const activeCount = activeActivities.length;
+      if (activeCount > 1) {
+        dispatchPopTimes(activeCount - 1);
+      }
+      dispatchReplace(actionParams.activityName);
       break;
     }
     case "JUMP_TO": {
