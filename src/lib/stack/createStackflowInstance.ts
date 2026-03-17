@@ -2,7 +2,10 @@ import { stackflow } from "@stackflow/react";
 import { basicUIPlugin } from "@stackflow/plugin-basic-ui";
 import { basicRendererPlugin } from "@stackflow/plugin-renderer-basic";
 
-import { stackFlagPlugin } from "../../plugins/stackFlagPlugin";
+import {
+  STACK_FLAG_INTERNAL_FIELD,
+  stackFlagPlugin,
+} from "../../plugins/stackFlagPlugin";
 import { layerStackPlugin } from "../../plugins/layerStackPlugin";
 import { depthRendererPlugin } from "../../plugins/depthRendererPlugin";
 import { depthBackPolicyPlugin } from "../../plugins/depthBackPolicyPlugin";
@@ -20,6 +23,18 @@ import type {
 } from "../../stack/stackConfig";
 
 export type StackInstance = ReturnType<typeof stackflow<ActivityRegistry>>;
+
+const shouldSuppressMotionForStackFlag = (activityParams: unknown) => {
+  if (!activityParams || typeof activityParams !== "object") {
+    return false;
+  }
+
+  const stackFlag = (
+    activityParams as Record<string, unknown>
+  )[STACK_FLAG_INTERNAL_FIELD];
+
+  return stackFlag === "CLEAR_STACK";
+};
 
 export const createStackflowInstance = ({
   stackName,
@@ -79,7 +94,10 @@ export const createStackflowInstance = ({
   }) as typeof instance.actions.dispatchEvent;
 
   instance.actions.push = ((activityName, activityParams, options) => {
-    if (shouldSuppressMotionForAnimateOption(options)) {
+    if (
+      shouldSuppressMotionForAnimateOption(options) ||
+      shouldSuppressMotionForStackFlag(activityParams)
+    ) {
       return withTemporaryStackflowNoMotion(() =>
         originalPush(activityName, activityParams, options),
       );

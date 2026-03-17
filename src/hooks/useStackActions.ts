@@ -10,12 +10,14 @@ type UnknownRecord = Record<string, unknown>;
 
 type StackPushParams = Parameters<StackInstance["actions"]["push"]>[1];
 type StackReplaceParams = Parameters<StackInstance["actions"]["replace"]>[1];
+type StackActivityName = Parameters<StackInstance["actions"]["push"]>[0];
 
 export type StackPushOptions = {
   params?: StackPushParams;
   stack?: StackName;
   animate?: boolean;
   flag?: StackFlag;
+  flagTargetActivity?: StackActivityName;
 };
 
 export type StackReplaceOptions = {
@@ -42,7 +44,7 @@ export const useStackActions = () => {
 
   const push = useCallback(
     (
-      activityName: Parameters<StackInstance["actions"]["push"]>[0],
+      activityName: StackActivityName,
       options?: StackPushOptions,
     ) => {
       const targetStack = options?.stack ?? defaultStack;
@@ -53,16 +55,21 @@ export const useStackActions = () => {
 
       const params = options?.params;
       const stackFlag = options?.flag;
+      const flagTargetActivity = options?.flagTargetActivity;
       const { animate } = options ?? {};
+      const resolvedFlag =
+        stackFlag === "CLEAR_TOP" && flagTargetActivity
+          ? { type: "CLEAR_TOP" as const, activity: flagTargetActivity }
+          : stackFlag;
       const payload =
-        stackFlag && params && typeof params === "object"
+        resolvedFlag && params && typeof params === "object"
           ? ({
               ...(params as UnknownRecord),
-              [STACK_FLAG_INTERNAL_FIELD]: stackFlag,
+              [STACK_FLAG_INTERNAL_FIELD]: resolvedFlag,
             } as typeof params)
-          : stackFlag
+          : resolvedFlag
             ? ({
-                [STACK_FLAG_INTERNAL_FIELD]: stackFlag,
+                [STACK_FLAG_INTERNAL_FIELD]: resolvedFlag,
               } as typeof params)
             : params;
 

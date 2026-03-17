@@ -11,58 +11,16 @@ import type { StackflowReactPlugin } from "@stackflow/react";
 export type StackFlagKind =
   | "SINGLE_TOP"
   | "CLEAR_TOP"
-  | "JUMP_TO"
-  | "CLEAR_STACK"
-  | "CLEAR_TOP_SINGLE_TOP"
-  | "JUMP_TO_CLEAR_TOP";
+  | "CLEAR_STACK";
 
-export abstract class StackFlagBase {
-  abstract readonly flag: StackFlagKind;
-}
+export type StackFlag = StackFlagKind;
 
-export class StackFlagSingleTop extends StackFlagBase {
-  readonly flag = "SINGLE_TOP" as const;
-}
+type ClearTopFlagPayload = {
+  type: "CLEAR_TOP";
+  activity: string;
+};
 
-export class StackFlagClearTop extends StackFlagBase {
-  readonly flag = "CLEAR_TOP" as const;
-  constructor(public readonly activity: string) {
-    super();
-  }
-}
-
-export class StackFlagJumpTo extends StackFlagBase {
-  readonly flag = "JUMP_TO" as const;
-  constructor(public readonly activity: string) {
-    super();
-  }
-}
-
-export class StackFlagClearStack extends StackFlagBase {
-  readonly flag = "CLEAR_STACK" as const;
-}
-
-export class StackFlagClearTopSingleTop extends StackFlagBase {
-  readonly flag = "CLEAR_TOP_SINGLE_TOP" as const;
-  constructor(public readonly activity: string) {
-    super();
-  }
-}
-
-export class StackFlagJumpToClearTop extends StackFlagBase {
-  readonly flag = "JUMP_TO_CLEAR_TOP" as const;
-  constructor(public readonly activity: string) {
-    super();
-  }
-}
-
-export type StackFlag =
-  | StackFlagSingleTop
-  | StackFlagClearTop
-  | StackFlagJumpTo
-  | StackFlagClearStack
-  | StackFlagClearTopSingleTop
-  | StackFlagJumpToClearTop;
+type StackFlagPayload = StackFlag | ClearTopFlagPayload;
 
 /**
  * 호출부에서 주입하는 내부 키. 실제 params로 전달되지는 않도록 sanitize 단계에서 제거합니다.
@@ -76,7 +34,12 @@ type PushActionParams = Parameters<StackflowActions["push"]>[0];
 type ActivityParamsShape = PushActionParams["activityParams"] & UnknownRecord;
 type ActivityContextShape = PushActionParams["activityContext"] & UnknownRecord;
 
-type StackFlagCarrier = UnknownRecord & { [STACK_FLAG_FIELD]?: StackFlag };
+type StackFlagCarrier = UnknownRecord & { [STACK_FLAG_FIELD]?: StackFlagPayload };
+
+const isStackFlagKind = (value: unknown): value is StackFlagKind =>
+  value === "SINGLE_TOP" ||
+  value === "CLEAR_TOP" ||
+  value === "CLEAR_STACK";
 
 /**
  * params/context 객체에 섞여 들어온 내부 키를 제거합니다.
@@ -101,13 +64,26 @@ const sanitizeRecord = <T extends UnknownRecord | undefined>(params: T): T => {
  */
 const pickStackFlag = (
   params: UnknownRecord | undefined
-): StackFlag | undefined => {
+): StackFlagPayload | undefined => {
   if (!params || typeof params !== "object") {
     return undefined;
   }
 
   const candidate = (params as StackFlagCarrier)[STACK_FLAG_FIELD];
-  return candidate;
+  if (typeof candidate === "string" && isStackFlagKind(candidate)) {
+    return candidate;
+  }
+
+  if (
+    candidate &&
+    typeof candidate === "object" &&
+    candidate.type === "CLEAR_TOP" &&
+    typeof candidate.activity === "string"
+  ) {
+    return candidate;
+  }
+
+  return undefined;
 };
 
 /**
@@ -156,23 +132,29 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({
   const top = activeActivities[activeActivities.length - 1];
   const shouldSkipExitActiveState = actionParams.skipEnterActiveState === true;
 
-  const dispatchPush = (activityName: string) => {
+  const dispatchPush = (
+    activityName: string,
+    skipEnterActiveState = actionParams.skipEnterActiveState
+  ) => {
     actions.dispatchEvent("Pushed", {
       activityId: actionParams.activityId,
       activityName,
       activityParams: sanitizedParams,
       activityContext: sanitizedContext,
-      skipEnterActiveState: actionParams.skipEnterActiveState,
+      skipEnterActiveState,
     });
   };
 
-  const dispatchReplace = (activityName: string) => {
+  const dispatchReplace = (
+    activityName: string,
+    skipEnterActiveState = actionParams.skipEnterActiveState
+  ) => {
     actions.dispatchEvent("Replaced", {
       activityId: actionParams.activityId,
       activityName,
       activityParams: sanitizedParams,
       activityContext: sanitizedContext,
-      skipEnterActiveState: actionParams.skipEnterActiveState,
+      skipEnterActiveState,
     });
   };
 
@@ -205,7 +187,9 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({
     return true;
   };
 
-  switch (stackFlag.flag) {
+  const flagType = typeof stackFlag === "string" ? stackFlag : stackFlag.type;
+
+  switch (flagType) {
     case "SINGLE_TOP": {
       // 최상단이 동일하면 replace, 아니면 push.
       if (top?.name === actionParams.activityName) {
@@ -217,43 +201,22 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({
     }
     case "CLEAR_TOP": {
       // 대상이 스택에 있으면 위를 정리하고 replace, 없으면 새로 push.
-      if (!rewindToActivity(stackFlag.activity)) {
+      const targetActivity =
+        typeof stackFlag === "string" ? undefined : stackFlag.activity;
+
+      if (!targetActivity || !rewindToActivity(targetActivity)) {
         dispatchPush(actionParams.activityName);
       }
       break;
     }
     case "CLEAR_STACK": {
-      // 루트 위는 pop으로 비우고, 마지막 루트는 replace로 교체합니다.
+      // root activity 하나는 남기고, 그 위 레이어만 정리한 뒤 새 화면을 push합니다.
       const activeCount = activeActivities.length;
+
       if (activeCount > 1) {
-        dispatchPopTimes(activeCount - 1);
+        dispatchPopTimes(activeCount - 1, true);
       }
-      dispatchReplace(actionParams.activityName);
-      break;
-    }
-    case "JUMP_TO": {
-      // 호출부 요청과 상관없이 지정된 액티비티로 이동.
-      dispatchPush(stackFlag.activity);
-      break;
-    }
-    case "CLEAR_TOP_SINGLE_TOP": {
-      // 먼저 CLEAR_TOP 시도, 실패하면 SINGLE_TOP 규칙 적용.
-      if (rewindToActivity(stackFlag.activity)) {
-        break;
-      }
-      if (top?.name === actionParams.activityName) {
-        dispatchReplace(actionParams.activityName);
-      } else {
-        dispatchPush(actionParams.activityName);
-      }
-      break;
-    }
-    case "JUMP_TO_CLEAR_TOP": {
-      const target = stackFlag.activity;
-      if (rewindToActivity(target)) {
-        break;
-      }
-      dispatchPush(target);
+      dispatchPush(actionParams.activityName, true);
       break;
     }
     default: {

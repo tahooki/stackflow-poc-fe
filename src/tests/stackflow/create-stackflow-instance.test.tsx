@@ -19,10 +19,7 @@ vi.mock("../../config/Cfg", () => ({
 
 import { createStackflowInstance } from "../../lib/stack/createStackflowInstance";
 import { STACKFLOW_NO_MOTION_ATTR } from "../../lib/stack/stackflowNoMotion";
-import {
-  STACK_FLAG_INTERNAL_FIELD,
-  StackFlagClearStack,
-} from "../../plugins/stackFlagPlugin";
+import { STACK_FLAG_INTERNAL_FIELD } from "../../plugins/stackFlagPlugin";
 import type { StackRouteConfig } from "../../stack/stackConfig";
 
 const HomeActivityStub: ActivityComponentType<{ highlight?: string }> = ({
@@ -51,7 +48,7 @@ describe("createStackflowInstance", () => {
     document.documentElement.removeAttribute(STACKFLOW_NO_MOTION_ATTR);
   });
 
-  it("wraps CLEAR_STACK push and clears the stack with no-motion", () => {
+  it("wraps CLEAR_STACK push with no-motion and keeps the root activity visible", () => {
     const frames: FrameRequestCallback[] = [];
 
     vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
@@ -77,9 +74,8 @@ describe("createStackflowInstance", () => {
         "home",
         {
           highlight: "Cleared by flag",
-          [STACK_FLAG_INTERNAL_FIELD]: new StackFlagClearStack(),
-        },
-        { animate: false },
+          [STACK_FLAG_INTERNAL_FIELD]: "CLEAR_STACK",
+        } as Record<string, unknown>,
       );
     });
 
@@ -95,19 +91,16 @@ describe("createStackflowInstance", () => {
     const poppedNames = stack.activities
       .filter((activity) => activity.exitedBy?.name === "Popped")
       .map((activity) => activity.name);
-    const replacedNames = stack.activities
-      .filter((activity) => activity.exitedBy?.name === "Replaced")
-      .map((activity) => activity.name);
     const top = activeActivities[activeActivities.length - 1];
     const topParams = top?.params as Record<string, unknown> | undefined;
 
-    expect(activeActivities).toHaveLength(1);
+    expect(activeActivities).toHaveLength(2);
+    expect(activeActivities[0]?.name).toBe("home");
     expect(top?.name).toBe("home");
     expect(top?.transitionState).toBe("enter-done");
     expect(topParams?.highlight).toBe("Cleared by flag");
     expect(topParams?.[STACK_FLAG_INTERNAL_FIELD]).toBeUndefined();
     expect(poppedNames).toEqual(["detail", "orders"]);
-    expect(replacedNames).toEqual(["home"]);
 
     while (frames.length > 0) {
       frames.shift()?.(0);

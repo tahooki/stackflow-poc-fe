@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo } from "react";
 import "../assets/modalLab.css";
 import { useStackActions } from "../hooks/useStackActions";
 import { useImperativeModal } from "../hooks/useImperativeModal";
-import { StackFlagSingleTop } from "../plugins/stackFlagPlugin";
 
 type ModalTemplate = {
   title: string;
@@ -198,7 +197,7 @@ return (
                 onClick={() =>
                   push("orders", {
                     params: {},
-                    flag: new StackFlagSingleTop(),
+                    flag: "SINGLE_TOP",
                   })
                 }
               >

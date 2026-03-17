@@ -4,11 +4,6 @@ import type { ActivityComponentType } from "@stackflow/react";
 import { useMemo } from "react";
 
 import { useStackActions } from "../hooks/useStackActions";
-import {
-  StackFlagClearTop,
-  StackFlagJumpToClearTop,
-  StackFlagSingleTop,
-} from "../plugins/stackFlagPlugin";
 
 export type HomeActivityParams = {
   highlight?: string;
@@ -70,6 +65,17 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
             </button>
             <button
               type="button"
+              onClick={() =>
+                push("detail", {
+                  params: makeDetailPayload("CLEAR_STACK no-motion"),
+                  flag: "CLEAR_STACK",
+                })
+              }
+            >
+              Push detail via CLEAR_STACK
+            </button>
+            <button
+              type="button"
               onClick={() => {
                 const payload = makeDetailPayload("dispatchEvent skipEnter");
 
@@ -94,7 +100,8 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
               onClick={() =>
                 push("detail", {
                   params: { id: "42", title: "Reused via CLEAR_TOP" },
-                  flag: new StackFlagClearTop("detail"),
+                  flag: "CLEAR_TOP",
+                  flagTargetActivity: "detail",
                 })
               }
             >
@@ -103,20 +110,9 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
             <button
               type="button"
               onClick={() =>
-                push("detail", {
-                  params: { id: "99", title: "Jumped from notification" },
-                  flag: new StackFlagJumpToClearTop("detail"),
-                })
-              }
-            >
-              Jump to Detail 99 (JUMP_TO_CLEAR_TOP)
-            </button>
-            <button
-              type="button"
-              onClick={() =>
                 push("orders", {
                   params: {},
-                  flag: new StackFlagSingleTop(),
+                  flag: "SINGLE_TOP",
                 })
               }
             >
@@ -128,7 +124,7 @@ const HomeActivity: ActivityComponentType<HomeActivityParams> = ({
                 push("orders", {
                   params: {},
                   stack: "orders",
-                  flag: new StackFlagSingleTop(),
+                  flag: "SINGLE_TOP",
                 })
               }
             >

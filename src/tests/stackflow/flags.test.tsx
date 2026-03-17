@@ -5,12 +5,6 @@ import { describe, expect, it } from "vitest";
 import {
   stackFlagPlugin,
   STACK_FLAG_INTERNAL_FIELD,
-  StackFlagClearStack,
-  StackFlagClearTop,
-  StackFlagClearTopSingleTop,
-  StackFlagJumpTo,
-  StackFlagJumpToClearTop,
-  StackFlagSingleTop,
   type StackFlag,
 } from "../../plugins/stackFlagPlugin";
 import {
@@ -18,11 +12,13 @@ import {
   getTopActivity,
 } from "./helpers";
 
+type StackFlagPayload = StackFlag | { type: "CLEAR_TOP"; activity: string };
+
 const pushWithFlag = (
   instance: ReturnType<typeof createTestStackflow>["instance"],
   activityName: string,
-  flag: StackFlag,
-  params: Record<string, string | undefined> = {},
+  flag: StackFlagPayload,
+  params: Record<string, unknown> = {},
   options?: { animate?: boolean },
 ) => {
   act(() => {
@@ -39,7 +35,7 @@ describe("stackFlag plugin behavior", () => {
       plugins: [basicRendererPlugin(), stackFlagPlugin()],
     });
 
-    pushWithFlag(instance, "detail", new StackFlagSingleTop());
+    pushWithFlag(instance, "detail", "SINGLE_TOP");
 
     const top = getTopActivity(instance);
     expect(top?.params[STACK_FLAG_INTERNAL_FIELD]).toBeUndefined();
@@ -54,7 +50,7 @@ describe("stackFlag plugin behavior", () => {
       instance.actions.push("detail", { id: "1" });
     });
 
-    pushWithFlag(instance, "detail", new StackFlagSingleTop(), { id: "2" });
+    pushWithFlag(instance, "detail", "SINGLE_TOP", { id: "2" });
 
     const details = instance.actions
       .getStack()
@@ -73,7 +69,7 @@ describe("stackFlag plugin behavior", () => {
       instance.actions.push("orders", { id: "2" });
     });
 
-    pushWithFlag(instance, "detail", new StackFlagClearTop("detail"));
+    pushWithFlag(instance, "detail", { type: "CLEAR_TOP", activity: "detail" });
 
     const orders = instance.actions
       .getStack()
@@ -93,7 +89,7 @@ describe("stackFlag plugin behavior", () => {
       instance.actions.push("orders", { id: "2" });
     });
 
-    pushWithFlag(instance, "snapshot", new StackFlagClearStack());
+    pushWithFlag(instance, "snapshot", "CLEAR_STACK");
 
     const detail = instance.actions
       .getStack()
@@ -121,7 +117,7 @@ describe("stackFlag plugin behavior", () => {
     pushWithFlag(
       instance,
       "snapshot",
-      new StackFlagClearStack(),
+      "CLEAR_STACK",
       {},
       { animate: false },
     );
@@ -138,79 +134,14 @@ describe("stackFlag plugin behavior", () => {
     expect(getTopActivity(instance)?.transitionState).toBe("enter-done");
   });
 
-  it("JUMP_TO forces navigation to target activity", () => {
+  it("CLEAR_TOP without target falls back to a normal push", () => {
     const { instance } = createTestStackflow({
       plugins: [basicRendererPlugin(), stackFlagPlugin()],
     });
 
-    pushWithFlag(instance, "orders", new StackFlagJumpTo("detail"));
+    pushWithFlag(instance, "orders", "CLEAR_TOP");
 
-    expect(getTopActivity(instance)?.name).toBe("detail");
-  });
-
-  it("CLEAR_TOP_SINGLE_TOP falls back to SINGLE_TOP when target is missing", () => {
-    const { instance } = createTestStackflow({
-      plugins: [basicRendererPlugin(), stackFlagPlugin()],
-    });
-
-    pushWithFlag(instance, "detail", new StackFlagClearTopSingleTop("orders"));
-
-    const orders = instance.actions
-      .getStack()
-      .activities.find((activity) => activity.name === "orders");
-
-    expect(orders).toBeUndefined();
-    expect(getTopActivity(instance)?.name).toBe("detail");
-  });
-
-  it("CLEAR_TOP_SINGLE_TOP rewinds when target exists", () => {
-    const { instance } = createTestStackflow({
-      plugins: [basicRendererPlugin(), stackFlagPlugin()],
-    });
-
-    act(() => {
-      instance.actions.push("detail", { id: "1" });
-      instance.actions.push("orders", { id: "2" });
-    });
-
-    pushWithFlag(instance, "detail", new StackFlagClearTopSingleTop("detail"));
-
-    const orders = instance.actions
-      .getStack()
-      .activities.find((activity) => activity.name === "orders");
-
-    expect(orders?.exitedBy?.name).toBe("Popped");
-    expect(getTopActivity(instance)?.name).toBe("detail");
-  });
-
-  it("JUMP_TO_CLEAR_TOP rewinds when target exists", () => {
-    const { instance } = createTestStackflow({
-      plugins: [basicRendererPlugin(), stackFlagPlugin()],
-    });
-
-    act(() => {
-      instance.actions.push("detail", { id: "1" });
-      instance.actions.push("orders", { id: "2" });
-    });
-
-    pushWithFlag(instance, "orders", new StackFlagJumpToClearTop("detail"));
-
-    const orders = instance.actions
-      .getStack()
-      .activities.find((activity) => activity.name === "orders");
-
-    expect(orders?.exitedBy?.name).toBe("Popped");
-    expect(getTopActivity(instance)?.name).toBe("detail");
-  });
-
-  it("JUMP_TO_CLEAR_TOP pushes target when missing", () => {
-    const { instance } = createTestStackflow({
-      plugins: [basicRendererPlugin(), stackFlagPlugin()],
-    });
-
-    pushWithFlag(instance, "orders", new StackFlagJumpToClearTop("detail"));
-
-    expect(getTopActivity(instance)?.name).toBe("detail");
+    expect(getTopActivity(instance)?.name).toBe("orders");
   });
 
   it("without plugin, stackFlag payload stays in params", () => {
@@ -220,7 +151,7 @@ describe("stackFlag plugin behavior", () => {
 
     act(() => {
       instance.actions.push("detail", {
-        [STACK_FLAG_INTERNAL_FIELD]: new StackFlagSingleTop(),
+        [STACK_FLAG_INTERNAL_FIELD]: "SINGLE_TOP",
       });
     });
 

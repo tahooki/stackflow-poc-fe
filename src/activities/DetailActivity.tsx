@@ -3,10 +3,6 @@ import type { ActivityComponentType } from "@stackflow/react";
 import { useMemo } from "react";
 
 import { useStackActions } from "../hooks/useStackActions";
-import {
-  StackFlagClearStack,
-  StackFlagSingleTop,
-} from "../plugins/stackFlagPlugin";
 
 export type DetailActivityParams = {
   id: string;
@@ -15,8 +11,8 @@ export type DetailActivityParams = {
 
 const fallbackTips = [
   "Use CLEAR_TOP to reuse Detail screens and keep state intact.",
-  "Combine SINGLE_TOP with CLEAR_TOP to emulate FLAG_ACTIVITY_CLEAR_TOP_SINGLE_TOP.",
-  "JUMP_TO can redirect deep links to the right activity without duplicating routes.",
+  "SINGLE_TOP helps keep duplicate Detail screens from stacking up.",
+  "CLEAR_STACK is useful when you want to restart a flow from a clean entry point.",
 ];
 
 const DetailActivity: ActivityComponentType<DetailActivityParams> = ({
@@ -49,7 +45,7 @@ const DetailActivity: ActivityComponentType<DetailActivityParams> = ({
               onClick={() =>
                 push("home", {
                   params: { highlight: "Returned from Detail via CLEAR_STACK" },
-                  flag: new StackFlagClearStack(),
+                  flag: "CLEAR_STACK",
                 })
               }
             >
@@ -60,7 +56,7 @@ const DetailActivity: ActivityComponentType<DetailActivityParams> = ({
               onClick={() =>
                 push("detail", {
                   params: { id: params.id, title: "Prevent duplicates" },
-                  flag: new StackFlagSingleTop(),
+                  flag: "SINGLE_TOP",
                 })
               }
             >

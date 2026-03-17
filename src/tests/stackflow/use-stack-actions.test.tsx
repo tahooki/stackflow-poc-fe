@@ -25,6 +25,12 @@ vi.mock("../../config/Cfg", async () => {
   };
 });
 
+vi.mock("../../plugins/layerStackPlugin", () => ({
+  layerStackPlugin: () => () => ({
+    key: "test-layer-stack-plugin",
+  }),
+}));
+
 import { Cfg } from "../../config/Cfg";
 import {
   StackProvider,
@@ -34,10 +40,7 @@ import {
 import type { DetailActivityParams } from "../../activities/DetailActivity";
 import type { HomeActivityParams } from "../../activities/HomeActivity";
 import { useStackActions } from "../../hooks/useStackActions";
-import {
-  StackFlagSingleTop,
-  STACK_FLAG_INTERNAL_FIELD,
-} from "../../plugins/stackFlagPlugin";
+import { STACK_FLAG_INTERNAL_FIELD } from "../../plugins/stackFlagPlugin";
 import type {
   StackConfigEntry,
   StackName,
@@ -151,7 +154,7 @@ const warmStack = async (stackName: StackName) => {
 
 describe.sequential("useStackActions", () => {
   beforeEach(() => {
-    Cfg.init({ stack: buildStackConfig() });
+    Cfg.init({ stack: buildStackConfig(), layer: {} });
     providerKey += 1;
     stackManagerRef = null;
   });
@@ -226,7 +229,7 @@ describe.sequential("useStackActions", () => {
             push("detail", {
               params: { id: "2" },
               animate: false,
-              flag: new StackFlagSingleTop(),
+              flag: "SINGLE_TOP",
             })
           }
         />
