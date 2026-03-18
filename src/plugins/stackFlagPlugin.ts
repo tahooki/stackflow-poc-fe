@@ -210,16 +210,18 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({
       break;
     }
     case "CLEAR_STACK": {
-      // root activity 하나는 남기고, 그 위 레이어만 정리한 뒤 새 화면을 push합니다.
+      // root activity는 남기고, root 바로 위에 남을 마지막 화면을 새 화면으로 교체합니다.
       const activeCount = activeActivities.length;
 
-      actions.dispatchEvent("Paused", {});
-
-      if (activeCount > 1) {
-        dispatchPopTimes(activeCount - 1, true);
+      if (activeCount <= 1) {
+        dispatchPush(actionParams.activityName, true);
+        break;
       }
-      dispatchPush(actionParams.activityName, true);
-      actions.dispatchEvent("Resumed", {});
+
+      if (activeCount > 2) {
+        dispatchPopTimes(activeCount - 2, true);
+      }
+      dispatchReplace(actionParams.activityName, true);
       break;
     }
     default: {

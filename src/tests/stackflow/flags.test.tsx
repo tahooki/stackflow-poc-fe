@@ -98,7 +98,7 @@ describe("stackFlag plugin behavior", () => {
       .getStack()
       .activities.find((activity) => activity.name === "orders");
 
-    expect(detail?.exitedBy?.name).toBe("Popped");
+    expect(detail?.exitedBy?.name).toBe("Replaced");
     expect(orders?.exitedBy?.name).toBe("Popped");
     expect(getTopActivity(instance)?.name).toBe("snapshot");
   });

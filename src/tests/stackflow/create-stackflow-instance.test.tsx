@@ -91,6 +91,9 @@ describe("createStackflowInstance", () => {
     const poppedNames = stack.activities
       .filter((activity) => activity.exitedBy?.name === "Popped")
       .map((activity) => activity.name);
+    const replacedNames = stack.activities
+      .filter((activity) => activity.exitedBy?.name === "Replaced")
+      .map((activity) => activity.name);
     const top = activeActivities[activeActivities.length - 1];
     const topParams = top?.params as Record<string, unknown> | undefined;
 
@@ -100,7 +103,8 @@ describe("createStackflowInstance", () => {
     expect(top?.transitionState).toBe("enter-done");
     expect(topParams?.highlight).toBe("Cleared by flag");
     expect(topParams?.[STACK_FLAG_INTERNAL_FIELD]).toBeUndefined();
-    expect(poppedNames).toEqual(["detail", "orders"]);
+    expect(poppedNames).toEqual(["orders"]);
+    expect(replacedNames).toEqual(["detail"]);
 
     while (frames.length > 0) {
       frames.shift()?.(0);
