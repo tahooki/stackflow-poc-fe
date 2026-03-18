@@ -213,10 +213,13 @@ const handleBeforePush: StackflowPluginPreEffectHook<PushActionParams> = ({
       // root activity 하나는 남기고, 그 위 레이어만 정리한 뒤 새 화면을 push합니다.
       const activeCount = activeActivities.length;
 
+      actions.dispatchEvent("Paused", {});
+
       if (activeCount > 1) {
         dispatchPopTimes(activeCount - 1, true);
       }
       dispatchPush(actionParams.activityName, true);
+      actions.dispatchEvent("Resumed", {});
       break;
     }
     default: {
