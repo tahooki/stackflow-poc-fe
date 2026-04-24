@@ -272,6 +272,10 @@ class LayerController {
     return this.state;
   }
 
+  getTopActivityLayer() {
+    return this.getTopActivity();
+  }
+
   async popTopLayer(): Promise<BackActionResult> {
     if (this.handlingBack) {
       console.log("[LayerController] popTopLayer skipped (handling)");

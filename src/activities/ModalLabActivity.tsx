@@ -2,10 +2,12 @@ import { AppScreen } from "@stackflow/plugin-basic-ui";
 import NiceModal, { useModal } from "@ebay/nice-modal-react";
 import type { ActivityComponentType } from "@stackflow/react";
 import Modal from "react-modal";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 import "../assets/modalLab.css";
 import { useStackActions } from "../hooks/useStackActions";
+import { useLayer } from "../hooks/useLayer";
 import {
   type NiceLayeredModalInjectedProps,
   useNiceLayeredModal,
@@ -55,6 +57,7 @@ const templates: ModalTemplate[] = [
 ];
 
 const MODAL_LAB_NICE_MODAL_ID = "modal-lab-overlay";
+const PORTAL_LAYER_MODAL_ID = "modal-lab-portal-layer";
 
 type ModalLabNiceModalProps = NiceLayeredModalInjectedProps & {
   template: ModalTemplate;
@@ -127,9 +130,105 @@ const ModalLabNiceModal = NiceModal.create<ModalLabNiceModalProps>(
 
 NiceModal.register(MODAL_LAB_NICE_MODAL_ID, ModalLabNiceModal);
 
+type PortalLayerModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  onPushDetail: () => void;
+};
+
+const PortalLayerModal = ({
+  isOpen,
+  onClose,
+  onPushDetail,
+}: PortalLayerModalProps) => {
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsVisible(true);
+    }
+  }, [isOpen]);
+
+  useLayer({
+    id: PORTAL_LAYER_MODAL_ID,
+    isOpen,
+    label: "createPortal + useLayer demo",
+    onClose,
+    onSuspend: () => setIsVisible(false),
+    onResume: () => setIsVisible(true),
+  });
+
+  if (!isOpen || !isVisible || typeof document === "undefined") {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      className="modal-lab__overlay modal-lab__overlay--portal"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        className="modal-lab__content modal-lab__content--portal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="portal-layer-title"
+      >
+        <div className="modal-lab__pill modal-lab__pill--portal">
+          Portal layer
+        </div>
+        <h2 id="portal-layer-title">createPortal + useLayer</h2>
+        <p className="modal-lab__description">
+          This modal is rendered directly into document.body and registers its
+          layer without using Nice Modal.
+        </p>
+        <ul className="modal-lab__list">
+          <li>useActivity can be unavailable outside the activity tree.</li>
+          <li>useLayer falls back to LayerManager's current top activity.</li>
+          <li>Push Detail hides this portal until the owner activity is top.</li>
+        </ul>
+        <div className="modal-lab__footer">
+          <div className="modal-lab__meta">
+            <span>createPortal</span>
+            <span>useLayer</span>
+            <span>top activity fallback</span>
+          </div>
+          <div className="modal-lab__controls">
+            <button
+              type="button"
+              className="modal-lab__ghost"
+              onClick={onClose}
+            >
+              Close
+            </button>
+            <button type="button" onClick={onPushDetail}>
+              Push Detail
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 const ModalLabActivity: ActivityComponentType = () => {
   const { push } = useStackActions();
   const openNiceModal = useNiceLayeredModal();
+  const [isPortalLayerOpen, setIsPortalLayerOpen] = useState(false);
+
+  const pushPortalDetail = useCallback(() => {
+    push("detail", {
+      params: {
+        id: "portal-layer-hop",
+        title: "Opened from createPortal + useLayer demo",
+      },
+    });
+  }, [push]);
 
   const openModal = useCallback(
     (template: ModalTemplate) => {
@@ -212,6 +311,22 @@ const modal = useModal();
           </section>
 
           <section className="activity__card">
+            <h2>Launch a portal layer</h2>
+            <p>
+              Render a full-screen portal into document.body while registering
+              it with useLayer.
+            </p>
+            <div className="activity__actions">
+              <button
+                type="button"
+                onClick={() => setIsPortalLayerOpen(true)}
+              >
+                Open createPortal + useLayer
+              </button>
+            </div>
+          </section>
+
+          <section className="activity__card">
             <h2>Snippet for reuse</h2>
             <p>
               Copy the minimal setup into any activity when you need an
@@ -241,6 +356,11 @@ const modal = useModal();
         </div>
       </div>
 
+      <PortalLayerModal
+        isOpen={isPortalLayerOpen}
+        onClose={() => setIsPortalLayerOpen(false)}
+        onPushDetail={pushPortalDetail}
+      />
     </AppScreen>
   );
 };

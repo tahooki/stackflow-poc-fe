@@ -8,6 +8,7 @@ import type { StackName } from "../stack/stackConfig";
 
 export type UseLayerOptions = {
   id?: string;
+  activityId?: string;
   label?: string;
   isOpen: boolean;
   persistAcrossActivities?: boolean;
@@ -20,6 +21,7 @@ export type UseLayerOptions = {
 
 export const useLayer = ({
   id: explicitId,
+  activityId: explicitActivityId,
   label,
   isOpen,
   persistAcrossActivities,
@@ -29,7 +31,7 @@ export const useLayer = ({
   kind = "modal",
   stackName,
 }: UseLayerOptions) => {
-  const activity = useActivity();
+  const activity = useActivity() as ReturnType<typeof useActivity> | null;
   const scope = useOptionalStackScope();
   const stackManager = Cfg.getStack();
   const activeStack = useSyncExternalStore(
@@ -41,6 +43,8 @@ export const useLayer = ({
     stackName ?? scope?.stackName ?? activeStack
   );
   const layerIdRef = useRef<string | null>(null);
+  const ownerActivityId =
+    explicitActivityId ?? activity?.id ?? controller.getTopActivityLayer()?.id;
 
   useEffect(() => {
     if (!isOpen) {
@@ -54,7 +58,7 @@ export const useLayer = ({
     const layerId = controller.registerLayer({
       kind,
       id: explicitId ?? layerIdRef.current ?? undefined,
-      activityId: activity.id,
+      activityId: ownerActivityId,
       label,
       persistAcrossActivities,
       onClose,
@@ -68,15 +72,16 @@ export const useLayer = ({
       controller.unregisterLayer(layerId);
     };
   }, [
-    activity.id,
     controller,
     explicitId,
+    explicitActivityId,
     isOpen,
     kind,
     label,
     onClose,
     onResume,
     onSuspend,
+    ownerActivityId,
     persistAcrossActivities,
   ]);
 };

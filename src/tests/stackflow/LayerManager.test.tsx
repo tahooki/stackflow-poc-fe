@@ -72,6 +72,24 @@ describe("LayerManager", () => {
     ]);
   });
 
+  it("exposes the current top activity for external layer owners", () => {
+    const manager = new LayerManager({});
+    const controller = manager.getController("root");
+
+    controller.setGroupLayers("stack", [
+      makeActivity({ id: "activity-a", isTop: false, zIndex: 1 }),
+      makeActivity({ id: "activity-b", isTop: true, zIndex: 2 }),
+    ]);
+
+    expect(controller.getTopActivityLayer()?.id).toBe("activity-b");
+
+    controller.setGroupLayers("stack", [
+      makeActivity({ id: "activity-a", isTop: true, zIndex: 1 }),
+    ]);
+
+    expect(controller.getTopActivityLayer()?.id).toBe("activity-a");
+  });
+
   it("setGroupLayers replaces group contents and removes missing layers", () => {
     const manager = new LayerManager({});
     const controller = manager.getController("root");
