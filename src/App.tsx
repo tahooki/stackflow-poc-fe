@@ -2,6 +2,7 @@ import "@stackflow/plugin-basic-ui/index.css";
 import "./App.css";
 import "./assets/stackflowNoMotion.css";
 
+import NiceModal from "@ebay/nice-modal-react";
 import { useEffect, useState } from "react";
 
 import { BackBridgeButton } from "./components/BackBridgeButton";
@@ -46,11 +47,13 @@ function App() {
   }
 
   return (
-    <GlobalLayout>
-      <StackProvider>
-        <AppShell />
-      </StackProvider>
-    </GlobalLayout>
+    <NiceModal.Provider>
+      <GlobalLayout>
+        <StackProvider>
+          <AppShell />
+        </StackProvider>
+      </GlobalLayout>
+    </NiceModal.Provider>
   );
 }
 

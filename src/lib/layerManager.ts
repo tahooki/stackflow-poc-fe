@@ -33,9 +33,12 @@ export type OverlayLayer = {
   activityId?: string;
   label?: string;
   openedAt: number;
+  isVisible?: boolean;
   persistAcrossActivities?: boolean;
   order?: number;
   onClose?: () => void;
+  onSuspend?: () => void;
+  onResume?: () => void;
 };
 
 export type LayerFrame = ActivityLayer | StepLayer | OverlayLayer;
@@ -88,9 +91,49 @@ const emptyState: LayerState = {
 const isOverlayKind = (kind: LayerKind): kind is OverlayKind =>
   overlayKinds.has(kind);
 
-const isOverlayLayer = (
+export const isOverlayLayer = (
   layer: LayerFrame | LayerRegistrationInput
 ): layer is OverlayLayer | OverlayRegistrationInput => isOverlayKind(layer.kind);
+
+export const isOverlayFrame = (layer: LayerFrame): layer is OverlayLayer =>
+  isOverlayKind(layer.kind);
+
+export const getTopActivityFrame = (frames: LayerFrame[]) => {
+  const activities = frames.filter(
+    (layer): layer is ActivityLayer => layer.kind === "activity"
+  );
+
+  const flaggedTop = activities.find((activity) => activity.isTop);
+  if (flaggedTop) {
+    return flaggedTop;
+  }
+
+  const visible = activities.filter((activity) => !activity.exitedBy);
+  if (visible.length === 0) {
+    return undefined;
+  }
+
+  return visible.reduce((current, candidate) =>
+    candidate.zIndex >= current.zIndex ? candidate : current
+  );
+};
+
+export const isOverlayVisibleForTopActivity = (
+  overlay: OverlayLayer,
+  topActivityId?: string
+) =>
+  Boolean(overlay.persistAcrossActivities) ||
+  !overlay.activityId ||
+  overlay.activityId === topActivityId;
+
+export const getVisibleOverlayFrames = (frames: LayerFrame[]) => {
+  const topActivity = getTopActivityFrame(frames);
+  return frames
+    .filter(isOverlayFrame)
+    .filter((overlay) =>
+      isOverlayVisibleForTopActivity(overlay, topActivity?.id)
+    );
+};
 
 const createLayerId = (kind: LayerKind, activityId?: string) => {
   const cryptoObj = globalThis.crypto;
@@ -302,7 +345,11 @@ class LayerController {
   }
 
   private refreshState() {
-    const frames = Array.from(this.layers.values()).sort(
+    let frames = Array.from(this.layers.values()).sort(
+      (left, right) => getLayerOrder(left) - getLayerOrder(right)
+    );
+    this.syncOverlayVisibility(frames);
+    frames = Array.from(this.layers.values()).sort(
       (left, right) => getLayerOrder(left) - getLayerOrder(right)
     );
     this.state = {
@@ -321,6 +368,37 @@ class LayerController {
     this.emit();
   }
 
+  private syncOverlayVisibility(frames: LayerFrame[]) {
+    const topActivity = getTopActivityFrame(frames);
+
+    frames.filter(isOverlayFrame).forEach((overlay) => {
+      const nextVisible = isOverlayVisibleForTopActivity(
+        overlay,
+        topActivity?.id
+      );
+      const previousVisible = overlay.isVisible;
+
+      if (previousVisible === nextVisible) {
+        return;
+      }
+
+      this.layers.set(overlay.id, {
+        ...overlay,
+        isVisible: nextVisible,
+      });
+
+      if (previousVisible === undefined) {
+        return;
+      }
+
+      if (nextVisible) {
+        overlay.onResume?.();
+      } else {
+        overlay.onSuspend?.();
+      }
+    });
+  }
+
   private normalizeLayer(layer: LayerRegistrationInput): LayerFrame {
     const withId = this.ensureLayerId(layer);
     if (!isOverlayLayer(withId)) {
@@ -332,10 +410,14 @@ class LayerController {
       withId.openedAt ??
       (existing && isOverlayLayer(existing) ? existing.openedAt : undefined) ??
       Date.now();
+    const isVisible =
+      (existing && isOverlayLayer(existing) ? existing.isVisible : undefined) ??
+      withId.isVisible;
 
     return {
       ...withId,
       openedAt,
+      isVisible,
     };
   }
 
@@ -375,23 +457,7 @@ class LayerController {
   }
 
   private getTopActivity() {
-    const activities = Array.from(this.layers.values()).filter(
-      (layer): layer is ActivityLayer => layer.kind === "activity"
-    );
-
-    const flaggedTop = activities.find((activity) => activity.isTop);
-    if (flaggedTop) {
-      return flaggedTop;
-    }
-
-    const visible = activities.filter((activity) => !activity.exitedBy);
-    if (visible.length === 0) {
-      return undefined;
-    }
-
-    return visible.reduce((current, candidate) =>
-      candidate.zIndex >= current.zIndex ? candidate : current
-    );
+    return getTopActivityFrame(Array.from(this.layers.values()));
   }
 
   private getTopStepForActivity(activityId: string) {

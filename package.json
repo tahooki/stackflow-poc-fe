@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ebay/nice-modal-react": "^1.2.13",
     "@stackflow/config": "^1.2.1",
     "@stackflow/core": "^1.2.0",
     "@stackflow/link": "^1.6.1",

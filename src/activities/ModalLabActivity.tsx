@@ -1,11 +1,15 @@
 import { AppScreen } from "@stackflow/plugin-basic-ui";
-import { useActivity, type ActivityComponentType } from "@stackflow/react";
+import NiceModal, { useModal } from "@ebay/nice-modal-react";
+import type { ActivityComponentType } from "@stackflow/react";
 import Modal from "react-modal";
 import { useCallback, useEffect, useMemo } from "react";
 
 import "../assets/modalLab.css";
 import { useStackActions } from "../hooks/useStackActions";
-import { useImperativeModal } from "../hooks/useImperativeModal";
+import {
+  type NiceLayeredModalInjectedProps,
+  useNiceLayeredModal,
+} from "../hooks/useNiceLayeredModal";
 
 type ModalTemplate = {
   title: string;
@@ -50,77 +54,101 @@ const templates: ModalTemplate[] = [
   },
 ];
 
-const ModalLabActivity: ActivityComponentType = () => {
-  const activity = useActivity();
-  const { push } = useStackActions();
-  const {
-    open: openImperativeModal,
-    ModalPortal,
-  } = useImperativeModal({
-    id: "modal-lab-overlay",
-    overlayClassName: "modal-lab__overlay",
-    contentClassName: "modal-lab__content",
-    bodyOpenClassName: "modal-lab__body-open",
-  });
+const MODAL_LAB_NICE_MODAL_ID = "modal-lab-overlay";
 
-  useEffect(() => {
-    Modal.setAppElement("#root");
-  }, []);
+type ModalLabNiceModalProps = NiceLayeredModalInjectedProps & {
+  template: ModalTemplate;
+  onPushDetail: () => void;
+};
+
+const ModalLabNiceModal = NiceModal.create<ModalLabNiceModalProps>(
+  ({ template, onLayerClose, onPushDetail, keepMounted }) => {
+    const modal = useModal();
+    const closeLayer = onLayerClose ?? (() => void modal.hide());
+
+    useEffect(() => {
+      Modal.setAppElement("#root");
+    }, []);
+
+    return (
+      <Modal
+        isOpen={modal.visible}
+        onRequestClose={closeLayer}
+        overlayClassName="modal-lab__overlay"
+        className="modal-lab__content"
+        bodyOpenClassName="modal-lab__body-open"
+        shouldCloseOnOverlayClick
+        shouldCloseOnEsc
+        shouldFocusAfterRender
+        contentLabel={template.title}
+        onAfterClose={() => {
+          modal.resolveHide();
+          if (!keepMounted) {
+            modal.remove();
+          }
+        }}
+      >
+        <div
+          className="modal-lab__pill"
+          style={{ backgroundColor: template.accent }}
+        >
+          Live overlay
+        </div>
+        <h2>{template.title}</h2>
+        <p className="modal-lab__description">{template.description}</p>
+        <ul className="modal-lab__list">
+          {template.bullets.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+        <div className="modal-lab__footer">
+          <div className="modal-lab__meta">
+            <span>Nice Modal</span>
+            <span>react-modal view</span>
+            <span>Layer-managed back</span>
+          </div>
+          <div className="modal-lab__controls">
+            <button
+              type="button"
+              className="modal-lab__ghost"
+              onClick={closeLayer}
+            >
+              Close
+            </button>
+            <button type="button" onClick={onPushDetail}>
+              Push Detail
+            </button>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
+);
+
+NiceModal.register(MODAL_LAB_NICE_MODAL_ID, ModalLabNiceModal);
+
+const ModalLabActivity: ActivityComponentType = () => {
+  const { push } = useStackActions();
+  const openNiceModal = useNiceLayeredModal();
 
   const openModal = useCallback(
     (template: ModalTemplate) => {
-      openImperativeModal({
+      openNiceModal({
+        id: MODAL_LAB_NICE_MODAL_ID,
         label: template.title,
-        render: ({ close }) => (
-          <>
-            <div
-              className="modal-lab__pill"
-              style={{ backgroundColor: template.accent }}
-            >
-              Live overlay
-            </div>
-            <h2>{template.title}</h2>
-            <p className="modal-lab__description">{template.description}</p>
-            <ul className="modal-lab__list">
-              {template.bullets.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-            <div className="modal-lab__footer">
-              <div className="modal-lab__meta">
-                <span>react-modal</span>
-                <span>Full-screen overlay</span>
-                <span>Accessible focus trap</span>
-              </div>
-              <div className="modal-lab__controls">
-                <button
-                  type="button"
-                  className="modal-lab__ghost"
-                  onClick={close}
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    close();
-                    push("detail", {
-                      params: {
-                        id: "modal-hop",
-                        title: "Opened from Modal.open() demo",
-                      },
-                    });
-                  }}
-                >
-                  Close and push Detail
-                </button>
-              </div>
-            </div>
-          </>
-        ),
+        args: {
+          template,
+          onPushDetail: () =>
+            push("detail", {
+              params: {
+                id: "modal-hop",
+                title: "Opened from Nice Modal demo",
+              },
+            }),
+        },
       });
     },
-    [openImperativeModal, push]
+    [openNiceModal, push]
   );
 
   const templateButtons = useMemo(
@@ -131,46 +159,45 @@ const ModalLabActivity: ActivityComponentType = () => {
           type="button"
           onClick={() => openModal(template)}
         >
-          Modal.open(): {template.title}
+          NiceModal.show(): {template.title}
         </button>
       )),
     [openModal]
   );
 
-  const snippet = `Modal.setAppElement('#root');
+  const snippet = `// App root
+<NiceModal.Provider>
+  <App />
+</NiceModal.Provider>
 
-const { open, ModalPortal } = useImperativeModal({
-  id: 'my-overlay',
-  overlayClassName: 'modal-lab__overlay',
-  contentClassName: 'modal-lab__content',
+// Activity
+const openModal = useNiceLayeredModal();
+
+openModal({
+  id: 'delete-confirm',
+  label: 'Delete confirm',
+  args: { itemId },
 });
 
-const openModal = () =>
-  open({
-    label: 'My modal',
-    render: ({ close }) => (
-      <div>
-        Modal.open() content
-        <button onClick={close}>Close</button>
-      </div>
-    ),
-  });
-
-return (
-  <>
-    <button onClick={openModal}>Modal.open()</button>
-    <ModalPortal />
-  </>
-);`;
+// NiceModal component
+const modal = useModal();
+<Modal
+  open={modal.visible}
+  onCancel={props.onLayerClose}
+  afterClose={() => {
+    modal.resolveHide();
+    if (!props.keepMounted) modal.remove();
+  }}
+/>`;
 
   return (
     <AppScreen appBar={{ title: "Modal Lab" }}>
       <div className="activity modal-lab">
         <section className="activity__header">
-          <h1>React Modal sandbox</h1>
+          <h1>Nice Modal sandbox</h1>
           <p>
-            Drop in react-modal and fire a full-screen overlay from a simple
-            Modal.open()-style helper.
+            Route Nice Modal through LayerManager so modals suspend under pushed
+            activities and resume on back.
           </p>
         </section>
 
@@ -214,7 +241,6 @@ return (
         </div>
       </div>
 
-      {activity.isTop ? <ModalPortal /> : null}
     </AppScreen>
   );
 };

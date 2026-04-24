@@ -2,6 +2,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useActivity } from "@stackflow/react";
 
 import { Cfg } from "../config/Cfg";
+import { useOptionalStackScope } from "../contexts/StackContext";
 import type { OverlayKind } from "../lib/layerManager";
 import type { StackName } from "../stack/stackConfig";
 
@@ -11,6 +12,8 @@ export type UseLayerOptions = {
   isOpen: boolean;
   persistAcrossActivities?: boolean;
   onClose?: () => void;
+  onSuspend?: () => void;
+  onResume?: () => void;
   kind?: OverlayKind;
   stackName?: StackName;
 };
@@ -21,17 +24,22 @@ export const useLayer = ({
   isOpen,
   persistAcrossActivities,
   onClose,
+  onSuspend,
+  onResume,
   kind = "modal",
   stackName,
 }: UseLayerOptions) => {
   const activity = useActivity();
+  const scope = useOptionalStackScope();
   const stackManager = Cfg.getStack();
   const activeStack = useSyncExternalStore(
     stackManager.subscribeStackSwitch.bind(stackManager),
     () => stackManager.getStackSwitchState().activeStack,
     () => stackManager.getStackSwitchState().activeStack
   );
-  const controller = Cfg.getLayer().getController(stackName ?? activeStack);
+  const controller = Cfg.getLayer().getController(
+    stackName ?? scope?.stackName ?? activeStack
+  );
   const layerIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -50,6 +58,8 @@ export const useLayer = ({
       label,
       persistAcrossActivities,
       onClose,
+      onSuspend,
+      onResume,
     });
 
     layerIdRef.current = layerId;
@@ -65,6 +75,8 @@ export const useLayer = ({
     kind,
     label,
     onClose,
+    onResume,
+    onSuspend,
     persistAcrossActivities,
   ]);
 };

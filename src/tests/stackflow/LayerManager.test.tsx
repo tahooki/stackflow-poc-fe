@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  getVisibleOverlayFrames,
   LayerManager,
   type ActivityLayer,
   type OverlayLayer,
@@ -125,6 +126,93 @@ describe("LayerManager", () => {
       "modal-persist",
       "modal-global",
     ]);
+  });
+
+  it("shows only overlays owned by the top activity plus persistent/global overlays", () => {
+    const frames = [
+      makeActivity({ id: "activity-a", isTop: false, zIndex: 1 }),
+      makeOverlay({ id: "modal-a", activityId: "activity-a", openedAt: 1 }),
+      makeActivity({ id: "activity-b", isTop: true, zIndex: 2 }),
+      makeOverlay({ id: "modal-b", activityId: "activity-b", openedAt: 2 }),
+      makeOverlay({
+        id: "modal-persist",
+        activityId: "activity-a",
+        persistAcrossActivities: true,
+        openedAt: 3,
+      }),
+      makeOverlay({ id: "modal-global", activityId: undefined, openedAt: 4 }),
+    ];
+
+    expect(getVisibleOverlayFrames(frames).map((frame) => frame.id)).toEqual([
+      "modal-b",
+      "modal-persist",
+      "modal-global",
+    ]);
+
+    const resumedFrames = frames.map((frame) => {
+      if (frame.kind !== "activity") {
+        return frame;
+      }
+
+      return {
+        ...frame,
+        isTop: frame.id === "activity-a",
+      };
+    });
+
+    expect(
+      getVisibleOverlayFrames(resumedFrames).map((frame) => frame.id)
+    ).toEqual(["modal-a", "modal-persist", "modal-global"]);
+  });
+
+  it("suspends and resumes owner overlays when the top activity changes", () => {
+    const manager = new LayerManager({});
+    const controller = manager.getController("root");
+    const onSuspend = vi.fn();
+    const onResume = vi.fn();
+
+    controller.setGroupLayers("stack", [
+      makeActivity({ id: "activity-a", isTop: true, zIndex: 1 }),
+    ]);
+    controller.registerLayer(
+      makeOverlay({
+        id: "modal-a",
+        activityId: "activity-a",
+        onSuspend,
+        onResume,
+      })
+    );
+
+    expect(
+      controller
+        .getState()
+        .frames.find((frame) => frame.id === "modal-a" && frame.kind === "modal")
+    ).toMatchObject({ isVisible: true });
+
+    controller.setGroupLayers("stack", [
+      makeActivity({ id: "activity-a", isTop: false, zIndex: 1 }),
+      makeActivity({ id: "activity-b", isTop: true, zIndex: 2 }),
+    ]);
+
+    expect(onSuspend).toHaveBeenCalledTimes(1);
+    expect(onResume).not.toHaveBeenCalled();
+    expect(
+      controller
+        .getState()
+        .frames.find((frame) => frame.id === "modal-a" && frame.kind === "modal")
+    ).toMatchObject({ isVisible: false });
+
+    controller.setGroupLayers("stack", [
+      makeActivity({ id: "activity-a", isTop: true, zIndex: 1 }),
+    ]);
+
+    expect(onSuspend).toHaveBeenCalledTimes(1);
+    expect(onResume).toHaveBeenCalledTimes(1);
+    expect(
+      controller
+        .getState()
+        .frames.find((frame) => frame.id === "modal-a" && frame.kind === "modal")
+    ).toMatchObject({ isVisible: true });
   });
 
   it("popTopLayer pops the newest overlay and unregisters it", async () => {

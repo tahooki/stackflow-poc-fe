@@ -25,6 +25,10 @@ export type OpenLayeredModalOptions<TModal extends ModalInstance | void> = {
    */
   persistAcrossActivities?: boolean;
   /**
+   * 이 모달을 소유한 액티비티 ID. 지정하면 다른 액티비티가 top일 때 suspend 된다.
+   */
+  activityId?: string;
+  /**
    * 실제 모달을 띄우는 함수(예: AntD Modal.open/confirm)
    * onClose를 호출하면 layerController도 함께 정리된다.
    */
@@ -33,6 +37,14 @@ export type OpenLayeredModalOptions<TModal extends ModalInstance | void> = {
    * 모달 닫힘 시 추가 정리가 필요하면 전달 (예: analytics)
    */
   onClose?: () => void;
+  /**
+   * 소유 액티비티가 top에서 내려갈 때 포털 인스턴스를 숨긴다.
+   */
+  onSuspend?: (instance: TModal | null) => void;
+  /**
+   * 소유 액티비티가 다시 top이 될 때 포털 인스턴스를 다시 표시한다.
+   */
+  onResume?: (instance: TModal | null) => void;
   /**
    * 다중 스택 환경에서 모달을 귀속시킬 스택 이름.
    * 지정하지 않으면 initStack으로 귀속된다.
@@ -64,8 +76,11 @@ export const openLayeredModal = <TModal extends ModalInstance | void>({
   label,
   kind = "modal",
   persistAcrossActivities,
+  activityId,
   openModal,
   onClose,
+  onSuspend,
+  onResume,
   stackName,
 }: OpenLayeredModalOptions<TModal>) => {
   let instance: TModal | null = null;
@@ -87,9 +102,12 @@ export const openLayeredModal = <TModal extends ModalInstance | void>({
   layerId = controller.registerLayer({
     kind,
     id,
+    activityId,
     label,
     persistAcrossActivities,
     onClose: cleanup,
+    onSuspend: () => onSuspend?.(instance),
+    onResume: () => onResume?.(instance),
   });
 
   instance = openModal({ onClose: cleanup });
